@@ -1,0 +1,21 @@
+{
+  "name": "JS Starter",
+  "image": "mcr.microsoft.com/devcontainers/javascript-node:20",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-vscode.live-server",
+        // Extension to force markdown files to open in Preview mode automatically
+        "hnw.vscode-auto-open-markdown-preview" 
+      ],
+      "settings": {
+        "livePreview.server.keepAlive": true,
+        "livePreview.defaultPreviewPath": "index.html",
+        "workbench.panel.defaultLocation": "bottom",
+        "workbench.sideBar.location": "left",
+        "workbench.activityBar.visible": true,
+        "workbench.view.explorer": false
+      }
+    }
+  }
+}
