@@ -1,25 +1,14 @@
+import { Player } from './player.js';
+import { buildLevel } from './level.js';
+
 await Canvas();
 world.gravity.y = 10;
 
-let ball = new Sprite();
-ball.diameter = 50;
-ball.img = '🤪';
-
-let groundA = new Sprite();
-groundA.x = -120;
-groundA.width = 220;
-groundA.rotation = 30;
-groundA.physics = STATIC;
-
-let groundB = new Sprite();
-groundB.x = 120;
-groundB.width = 220;
-groundB.rotation = -30;
-groundB.physics = STATIC;
+const platformGroup = buildLevel();
+const player = new Player(0, 325, platformGroup);
 
 q5.update = function () {
-	background('skyblue');
-	text('click to jump!', 0, -50);
+  background('#1a1a2e');
 
-	if (mouse.presses()) ball.vel.y = -5;
+  player.update();
 };
