@@ -1,7 +1,7 @@
 export class Player {
   constructor(x, y, groundGroup) {
-    this.sprite = new Sprite(x, y, 20, 30, 'd');
-    this.sprite.rotationLocked = true;
+    this.sprite = new Sprite(x, y, 20, 20, 'd');
+    this.sprite.rotationLock = true;
     this.sprite.friction = 0;
     this.sprite.bounciness = 0;
     this.sprite.color = '#e74c3c';
@@ -11,6 +11,7 @@ export class Player {
     this.speed = 4;
     this.jumpPower = -10;
     this.isGrounded = false;
+    this.cameraSpeed = 0.1;
 
     const p = this.sprite;
     p.collides(groundGroup, () => this.isGrounded = true);
@@ -30,5 +31,12 @@ export class Player {
       this.sprite.vel.y = this.jumpPower;
       this.isGrounded = false;
     }
+
+    this._followCamera(this.sprite.x + 10, this.sprite.y + 10, this.cameraSpeed)
+  }
+
+  _followCamera(targetX, targetY, speed) {
+    camera.x += (targetX - camera.x) * speed;
+    camera.y += (targetY - camera.y) * speed;
   }
 }
