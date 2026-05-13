@@ -9,7 +9,7 @@ export class Player {
     this.sprite.strokeWeight = 2;
 
     this.speed = 4;
-    this.jumpPower = -10;
+    this.jumpPower = 8;
     this.isGrounded = false;
     this.cameraSpeed = 0.1;
 
@@ -28,7 +28,7 @@ export class Player {
     }
 
     if (this.isGrounded && (keyboard.presses('ArrowUp') || keyboard.presses('W') || keyboard.presses('Space'))) {
-      this.sprite.vel.y = this.jumpPower;
+      this.sprite.vel.y = -this.jumpPower;
       this.isGrounded = false;
     }
 
