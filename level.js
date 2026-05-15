@@ -14,7 +14,6 @@ export function buildLevel() {
     { x: 450, y: 160, w: 100, h: 20 },
     { x: -250, y: 120, w: 80, h: 20 },
     { x: 250, y: 120, w: 80, h: 20 },
-
   ];
 
   for (const p of platforms) {
