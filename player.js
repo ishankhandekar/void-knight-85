@@ -156,6 +156,8 @@ export class Player {
       this.sprite.vel.x = 0;
       this.sprite.vel.y = 0;
     }
+
+    this.sprite.vel.y = Math.min(this.sprite.vel.y, 13);
   }
 
   _followCamera(targetX, targetY, speed) {
