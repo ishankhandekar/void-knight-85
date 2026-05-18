@@ -28,12 +28,12 @@ export class Player {
     // Wall slide
     this.wallSlideMaxSpeed = 1.5;
 
-    // Wall jump — ease-out decaying force, fast at start and slow at end
+    // Wall jump — horizontal velocity starts at peak and decays exponentially until next collision
     this.wallJumpPower = this.jumpPower * 0.7;
-    this.wallJumpInstant = 2.5;     // immediate vel.x kick so player input can't zero it instantly
-    this.wallJumpAccel = 1.2;     // peak force added per frame on top of the instant kick
-    this.wallJumpDuration = 260;  // ms over which the decaying force fades to 0
-    this.wallJumpForceDir = 0;    // +1 or -1
+    this.wallJumpPeakVx = 5;      // initial horizontal velocity right after the jump
+    this.wallJumpDecay = 0.0004;   // exponential decay rate per ms: vx = peak * exp(-decay * age)
+    this.wallJumpEndVx = 0.05;     // arc ends once decayed velocity falls below this
+    this.wallJumpForceDir = 0;    // +1 or -1, 0 when arc is inactive
 
     // Prevent instantly re-grabbing the same wall
     this.reGrabCooldown = 60;
@@ -75,6 +75,7 @@ export class Player {
     if (this.isGrounded) {
       this.lastGroundedTime = now;
       this.lastWallJumpTime = 0; // landing cancels any residual wall jump force
+      this.wallJumpForceDir = 0;
     }
 
     const coyoteOk = (now - this.lastGroundedTime) < this.coyoteTime && this.sprite.vel.y >= 0;
@@ -82,6 +83,11 @@ export class Player {
     const reGrabBlocked = (now - this.lastWallJumpTime) < this.reGrabCooldown &&
                           onWall === this.lastWallDir;
     const effectiveWall = reGrabBlocked ? 0 : onWall;
+
+    // Hitting a *different* wall (one not filtered by the regrab cooldown) ends the arc
+    if (effectiveWall && this.wallJumpForceDir !== 0) {
+      this.wallJumpForceDir = 0;
+    }
 
     const left  = keyboard.ArrowLeft  || keyboard.A;
     const right = keyboard.ArrowRight || keyboard.D;
@@ -92,22 +98,26 @@ export class Player {
     const jumpBufferOk = (now - this.lastJumpPressTime) < this.jumpBufferTime;
 
     const wallJumpAge = now - this.lastWallJumpTime;
-    const inArc = this.wallJumpForceDir !== 0 && wallJumpAge < this.wallJumpDuration;
+    const inArc = !this.isGrounded && this.wallJumpForceDir !== 0;
 
-    // --- Horizontal movement: air control is reduced while the wall jump arc is active ---
-    if (left || right) {
-      const targetVx = left ? -this.speed : this.speed;
-      const accel = this.isGrounded ? 1.0 : (inArc ? 0.18 : 0.55);
-      this.sprite.vel.x += (targetVx - this.sprite.vel.x) * accel;
-    } else {
-      this.sprite.vel.x *= this.isGrounded ? 0.72 : 0.92;
+    // --- Drive horizontal velocity directly with an exponential decay curve (runs first so input can nudge it) ---
+    if (inArc) {
+      const decayedVx = this.wallJumpPeakVx * Math.exp(-this.wallJumpDecay * wallJumpAge);
+      if (decayedVx < this.wallJumpEndVx) {
+        this.wallJumpForceDir = 0; // arc ends, normal air control resumes next frame
+      } else {
+        this.sprite.vel.x = this.wallJumpForceDir * decayedVx;
+      }
     }
 
-    // --- Ease-out wall jump force on top of instant velocity: (1-t)² curve ---
-    if (inArc) {
-      const t = wallJumpAge / this.wallJumpDuration;
-      const force = this.wallJumpAccel * Math.pow(1 - t, 2);
-      this.sprite.vel.x += this.wallJumpForceDir * force;
+    // --- Horizontal input: reduced influence during the arc, full air control otherwise ---
+    const arcActive = this.wallJumpForceDir !== 0 && !this.isGrounded;
+    if (left || right) {
+      const targetVx = left ? -this.speed : this.speed;
+      const accel = this.isGrounded ? 1.0 : (arcActive ? 0.2 : 0.55);
+      this.sprite.vel.x += (targetVx - this.sprite.vel.x) * accel;
+    } else if (!arcActive) {
+      this.sprite.vel.x *= this.isGrounded ? 0.72 : 0.92;
     }
 
     // --- Wall slide: pressing into wall slows descent ---
@@ -126,7 +136,7 @@ export class Player {
     // --- Wall jump: set vertical, reset horizontal, start decaying force ---
     } else if (effectiveWall && !this.isGrounded && jumpBufferOk) {
       this.sprite.vel.y = -this.wallJumpPower;
-      this.sprite.vel.x = effectiveWall * this.wallJumpInstant;
+      this.sprite.vel.x = effectiveWall * this.wallJumpPeakVx;
       this.wallJumpForceDir = effectiveWall;
       this.lastWallJumpTime = now;
       this.lastWallDir = effectiveWall;
