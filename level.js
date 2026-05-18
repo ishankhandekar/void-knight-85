@@ -50,7 +50,7 @@ export function buildLevel(canvasHeight) {
     j.strokeWeight = 1;
   }
   jumpPadGroup.collides(allSprites, (pad, sprite) => {
-    if (sprite !== pad && sprite.vel.y > 0) sprite.vel.y = -15;
+    if (sprite !== pad && sprite.vel.y > 0) sprite.vel.y = -30;
   });
 
   const spikeGroup = new Group();
