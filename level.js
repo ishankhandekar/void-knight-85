@@ -23,7 +23,7 @@ export function buildLevel(canvasHeight) {
   for (const p of platforms) {
     const plat = new platformGroup.Sprite(p.x, p.y, p.w, p.h);
     plat.physics = STATIC;
-    plat.color = '#5a6c7d';
+    plat.color = '#25435f';
     plat.stroke = '#3d4a5a';
     plat.strokeWeight = 1;
     plat.bounciness = 0;
