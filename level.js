@@ -1,20 +1,24 @@
-export function buildLevel() {
+export function buildLevel(canvasHeight) {
+  // Shift everything so the player rests at the vertical screen center (height/2).
+  // Original rest y = 330 (platform top 340, player half 10). dy moves that to height/2.
+  const dy = canvasHeight / 2 - 330;
+
   const platformGroup = new Group();
 
   const platforms = [
-    { x: 0, y: 350, w: 500, h: 20 },
+    { x: 0,    y: 350, w: 500, h: 20 },
     { x: -300, y: 280, w: 150, h: 20 },
     { x: -150, y: 200, w: 120, h: 20 },
-    { x: 150, y: 180, w: 120, h: 20 },
-    { x: -30, y: 230, w: 20, h: 300 },
-    { x: 30, y: 200, w: 20, h: 300 },
+    { x: 150,  y: 180, w: 120, h: 20 },
+    { x: -30,  y: 230, w: 20,  h: 300 },
+    { x: 30,   y: 200, w: 20,  h: 300 },
     { x: -500, y: 350, w: 200, h: 20 },
-    { x: 500, y: 350, w: 200, h: 20 },
+    { x: 500,  y: 350, w: 200, h: 20 },
     { x: -450, y: 160, w: 100, h: 20 },
-    { x: 450, y: 160, w: 100, h: 20 },
-    { x: -250, y: 120, w: 80, h: 20 },
-    { x: 250, y: 120, w: 80, h: 20 },
-  ];
+    { x: 450,  y: 160, w: 100, h: 20 },
+    { x: -250, y: 120, w: 80,  h: 20 },
+    { x: 250,  y: 120, w: 80,  h: 20 },
+  ].map(p => ({ ...p, y: p.y + dy }));
 
   for (const p of platforms) {
     const plat = new platformGroup.Sprite(p.x, p.y, p.w, p.h);
@@ -26,7 +30,7 @@ export function buildLevel() {
   }
 
   const slimeGroup = new Group();
-  for (const p of [{ x: 200, y: 335, w: 80, h: 10 }]) {
+  for (const p of [{ x: 200, y: 335 + dy, w: 80, h: 10 }]) {
     const s = new slimeGroup.Sprite(p.x, p.y, p.w, p.h);
     s.physics = STATIC;
     s.color = '#2ecc71';
@@ -38,7 +42,7 @@ export function buildLevel() {
   });
 
   const jumpPadGroup = new Group();
-  for (const p of [{ x: -300, y: 265, w: 50, h: 10 }]) {
+  for (const p of [{ x: -300, y: 265 + dy, w: 50, h: 10 }]) {
     const j = new jumpPadGroup.Sprite(p.x, p.y, p.w, p.h);
     j.physics = STATIC;
     j.color = '#f39c12';
@@ -50,7 +54,7 @@ export function buildLevel() {
   });
 
   const spikeGroup = new Group();
-  for (const p of [{ x: 300, y: 240, w: 60, h: 20 }]) {
+  for (const p of [{ x: 300, y: 240 + dy, w: 60, h: 20 }]) {
     const spike = new spikeGroup.Sprite(p.x, p.y, p.w, p.h);
     spike.physics = STATIC;
     spike.color = '#e74c3c';
@@ -62,7 +66,7 @@ export function buildLevel() {
       sprite.vel.x = 0;
       sprite.vel.y = 0;
       sprite.x = 0;
-      sprite.y = 325;
+      sprite.y = canvasHeight / 2 - 5;
     }
   });
 
