@@ -13,8 +13,8 @@ export class Player {
     this.groundGroup = groundGroup;
 
     // Movement
-    this.speed = 4;
-    this.jumpPower = 10;
+    this.speed = 3;
+    this.jumpPower = 9;
     this.cameraSpeed = 0.1;
 
     // Coyote time
@@ -30,7 +30,7 @@ export class Player {
 
     // Wall jump — ease-out decaying force, fast at start and slow at end
     this.wallJumpPower = this.jumpPower * 0.7;
-    this.wallJumpInstant = 2;     // immediate vel.x kick so player input can't zero it instantly
+    this.wallJumpInstant = 2.5;     // immediate vel.x kick so player input can't zero it instantly
     this.wallJumpAccel = 1.2;     // peak force added per frame on top of the instant kick
     this.wallJumpDuration = 260;  // ms over which the decaying force fades to 0
     this.wallJumpForceDir = 0;    // +1 or -1

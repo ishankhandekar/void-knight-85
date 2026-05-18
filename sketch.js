@@ -8,7 +8,7 @@ await loadImage('Images/crystal_cave_background_by_fellfeline_dektmf0-fullview-1
   bgImage = img;
 });
 
-world.gravity.y = 16;
+world.gravity.y = 20;
 
 const platformGroup = buildLevel(height);
 const player = new Player(0, height / 2 - 5, platformGroup);
