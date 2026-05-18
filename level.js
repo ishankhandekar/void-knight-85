@@ -2,7 +2,7 @@ export function buildLevel(canvasHeight) {
   // Shift everything so the player rests at the vertical screen center (height/2).
   // Original rest y = 330 (platform top 340, player half 10). dy moves that to height/2.
   const dy = canvasHeight / 2 - 330;
-
+  const max_y_velocity = -15;
   const platformGroup = new Group();
 
   const platforms = [
@@ -41,6 +41,8 @@ export function buildLevel(canvasHeight) {
     if (sprite !== slime) sprite.vel.x *= 0.92;
   });
 
+  let lastJumpPadTime = 0;
+
   const jumpPadGroup = new Group();
   for (const p of [{ x: -300, y: 265 + dy, w: 50, h: 10 }]) {
     const j = new jumpPadGroup.Sprite(p.x, p.y, p.w, p.h);
@@ -50,7 +52,11 @@ export function buildLevel(canvasHeight) {
     j.strokeWeight = 1;
   }
   jumpPadGroup.collides(allSprites, (pad, sprite) => {
-    if (sprite !== pad && sprite.vel.y > 0) sprite.vel.y = -30;
+    const now = Date.now();
+    if (sprite !== pad && sprite.vel.y > 0 && (now - lastJumpPadTime > 500)) {
+      sprite.vel.y = max_y_velocity;
+      lastJumpPadTime = now;
+    }
   });
 
   const spikeGroup = new Group();
