@@ -10,12 +10,14 @@ export class Player {
     this.sprite.addAni('Sprites/MaskedMCIdle.png', 2, '32x32')
     this.sprite.addAni('Sprites/MaskedMCJump.png', 3, '32x32')
     this.sprite.addAni('Sprites/MaskedMCWalking.png', 7, '32x32')
+    this.sprite.addAni('Sprites/MCwallclimb.png', 3, '32x32')
     this.sprite.anis.MaskedMCIdle.frameDelay = 10;
     this.sprite.anis.MaskedMCJump.frameDelay = 10;
     this.sprite.anis.MaskedMCWalking.frameDelay = 6;
+    this.sprite.anis.MCwallclimb.frameDelay = 8;
     // No need to scale after this
     // if you scale sprite after this it applies on top (stacks)
-    for (const key of ['MaskedMCIdle', 'MaskedMCJump', 'MaskedMCWalking']) {
+    for (const key of ['MaskedMCIdle', 'MaskedMCJump', 'MaskedMCWalking', 'MCwallclimb']) {
       this.sprite.anis[key].scale.x = 32 / 19;
       this.sprite.anis[key].scale.y = 32 / 19;
     }
@@ -57,6 +59,7 @@ export class Player {
     this.jumpAnimation = false;
     this.walkAnimation = false;
     this.idleAnimation = true;
+    this.wallClimbAnimation = false;
   }
 
   update() {
@@ -202,8 +205,23 @@ export class Player {
       this.sprite.vel.y *= 0.85;
     }
 
+    // Wall climb animation: play once and freeze on last frame while pressing into wall
+    const isWallClimbing = effectiveWall && !this.isGrounded && pressingTowardWall;
+    if (isWallClimbing && !this.wallClimbAnimation) {
+      this.sprite.changeAni('MCwallclimb');
+      this.sprite.ani.frame = 0;
+      this.sprite.ani.play();
+      this.wallClimbAnimation = true;
+    }
+    if (!isWallClimbing) {
+      this.wallClimbAnimation = false;
+    }
+    if (this.wallClimbAnimation && this.sprite.ani.frame >= this.sprite.ani.lastFrame) {
+      this.sprite.ani.pause();
+    }
+
     // Hold jump animation on last frame while airborne, return to idle/walk on landing
-    if (this.jumpAnimation) {
+    if (this.jumpAnimation && !this.wallClimbAnimation) {
       if (this.isGrounded && this.sprite.vel.y >= 0) {
         this.jumpAnimation = false;
       } else if (this.sprite.ani.frame >= this.sprite.ani.lastFrame) {
@@ -212,7 +230,7 @@ export class Player {
     }
 
     // Animate walking or idle when on the ground
-    if (!this.jumpAnimation) {
+    if (!this.jumpAnimation && !this.wallClimbAnimation) {
       if (this.isGrounded && Math.abs(this.sprite.vel.x) > 0.5) {
         this.sprite.changeAni('MaskedMCWalking');
         this.walkAnimation = true;
