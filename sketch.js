@@ -12,8 +12,15 @@ await loadImage('Images/crystal_cave_background_by_fellfeline_dektmf0-fullview-1
 
 world.gravity.y = 20;
 
+/*const level = buildLevel(height);
+const player = new Player(level.spawnX, level.spawnY, level.platforms);*/
+
 const level = buildLevel(height);
 const player = new Player(level.spawnX, level.spawnY, level.platforms);
+
+//Start the camera on the player immediately
+camera.x = level.spawnX + 10;
+camera.y = level.spawnY + 10;
 
 const PARALLAX_X = 0.05;
 const PARALLAX_Y = 0.03;
