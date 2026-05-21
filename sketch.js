@@ -1,4 +1,5 @@
 import { Player } from './player.js';
+import { Enemy } from './enemy.js';
 import { buildLevel } from './level.js';
 
 let bgImage;
@@ -14,6 +15,36 @@ world.gravity.y = 20;
 
 const level = buildLevel(height);
 const player = new Player(level.spawnX, level.spawnY, level.platforms);
+
+function stopEnemies(enemies) {
+  for (const enemy of enemies) {
+    enemy.sprite.vel.x = 0;
+    enemy.sprite.vel.y = 0;
+  }
+}
+// Enemies: patrol(x, y, leftBound, rightBound, platforms)
+const enemies = [
+  new Enemy(-100, 480, -200,  100, level.platforms), // Chamber 1 ground
+  new Enemy( 280, 320,  200,  400, level.platforms), // Chamber 2 platform
+  new Enemy( 100, 180,   20,  200, level.platforms), // Chamber 3 platform
+  new Enemy( 350,   0,  280,  430, level.platforms), // Chamber 4 platform
+];
+
+// Use q5play's overlap system (same as spikes/jump pads) so physics separation
+// doesn't prevent detection. overlaps() fires without resolving collision physics.
+for (const enemy of enemies) {
+  enemy.sprite.overlaps(player.sprite, (enemySprite, playerSprite) => {
+    if (player.isDying || enemySprite.deleted) return;
+    // Stomp: player falling onto top of enemy
+    if (playerSprite.vel.y > 0 && playerSprite.y < enemySprite.y - 4) {
+      enemySprite.delete();
+      playerSprite.vel.y = -7;
+    } else {
+      player.die();
+      stopEnemies(enemies);
+    }
+  });
+}
 
 const PARALLAX_X = 0.05;
 const PARALLAX_Y = 0.03;
@@ -47,7 +78,10 @@ q5.update = function () {
   }
 
   if (!levelComplete) {
-    player.update();
+    player.update(enemies);
+    if (!player.isDying) {
+      for (const enemy of enemies) enemy.update();
+    }
 
     // Check if player reached the door
     const dx = player.sprite.x - level.door.x;

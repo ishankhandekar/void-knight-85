@@ -21,7 +21,7 @@ export function buildLevel(canvasHeight) {
   plat(730, 140, 40, 1080);
 
   // === CHAMBER 1: Starting Room (bottom) ===
-  plat(-450, 500, 300, 20);
+  plat(-450, 500, 400, 20);
   plat(-100, 500, 200, 20);
   plat(250, 500, 250, 20);
   plat(550, 500, 200, 20);
@@ -133,11 +133,8 @@ export function buildLevel(canvasHeight) {
   });
 
   spikeGroup.overlaps(allSprites, (spike, sprite) => {
-    if (sprite !== spike && sprite !== doorSprite) {
-      sprite.vel.x = 0;
-      sprite.vel.y = 0;
-      sprite.x = spawnX;
-      sprite.y = spawnY;
+    if (sprite !== spike && sprite !== doorSprite && sprite._player) {
+      sprite._player.die();
     }
   });
 

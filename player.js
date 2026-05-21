@@ -7,17 +7,21 @@ export class Player {
     this.sprite.color = '#e74c3c';
     this.sprite.stroke = '#c0392b';
     this.sprite.strokeWeight = 2;
-    this.sprite.addAni('Sprites/MaskedMCIdle.png', 2, '32x32')
-    this.sprite.addAni('Sprites/MaskedMCJump.png', 3, '32x32')
-    this.sprite.addAni('Sprites/MaskedMCWalking.png', 7, '32x32')
-    this.sprite.addAni('Sprites/MCwallclimb.png', 3, '32x32')
+    this.sprite.addAni('Sprites/MaskedMCIdle.png', 3, '32x32')
+    this.sprite.addAni('Sprites/MaskedMCJump.png', 4, '32x32')
+    this.sprite.addAni('Sprites/MaskedMCWalking.png', 8, '32x32')
+    this.sprite.addAni('Sprites/MCwallclimb.png', 4, '32x32')
+    this.sprite.addAni('Sprites/MaskedMCdeath.png', 23, '32x32')
+    this.sprite.addAni('Sprites/MCattackani.png', 8, '32x32')
     this.sprite.anis.MaskedMCIdle.frameDelay = 10;
     this.sprite.anis.MaskedMCJump.frameDelay = 10;
     this.sprite.anis.MaskedMCWalking.frameDelay = 6;
     this.sprite.anis.MCwallclimb.frameDelay = 8;
+    this.sprite.anis.MaskedMCdeath.frameDelay = 5;
+    this.sprite.anis.MCattackani.frameDelay = 4;
     // No need to scale after this
     // if you scale sprite after this it applies on top (stacks)
-    for (const key of ['MaskedMCIdle', 'MaskedMCJump', 'MaskedMCWalking', 'MCwallclimb']) {
+    for (const key of ['MaskedMCIdle', 'MaskedMCJump', 'MaskedMCWalking', 'MCwallclimb', 'MaskedMCdeath', 'MCattackani']) {
       this.sprite.anis[key].scale.x = 32 / 19;
       this.sprite.anis[key].scale.y = 32 / 19;
     }
@@ -60,9 +64,48 @@ export class Player {
     this.walkAnimation = false;
     this.idleAnimation = true;
     this.wallClimbAnimation = false;
+    this.attackAnimation = false;
+
+    this.isDying = false;
+
+    // Back-reference so collision callbacks in level.js can call die()
+    this.sprite._player = this;
   }
 
-  update() {
+  die() {
+    if (this.isDying) return;
+    this.isDying = true;
+
+    // Freeze physics
+    this.sprite.vel.x = 0;
+    this.sprite.vel.y = 0;
+    this.sprite.physics = STATIC;
+
+    // Play death animation from frame 0, do not loop
+    this.sprite.changeAni('MaskedMCdeath');
+    this.sprite.ani.frame = 0;
+    this.sprite.ani.loop = false;
+    this.sprite.ani.play();
+  }
+
+  update(enemies) {
+    // While dying: wait for the animation to finish, then respawn
+    if (this.isDying) {
+      if (this.sprite.ani.frame >= this.sprite.ani.lastFrame) {
+        this.isDying = false;
+        this.sprite.physics = DYNAMIC;
+        this.sprite.x = this.spawnX;
+        this.sprite.y = this.spawnY;
+        this.sprite.vel.x = 0;
+        this.sprite.vel.y = 0;
+        this.jumpAnimation = false;
+        this.wallClimbAnimation = false;
+        this.idleAnimation = true;
+        this.sprite.changeAni('MaskedMCIdle');
+      }
+      return;
+    }
+
     // Player edge positions (sprite is 32x32, centered)
     const halfWidth  = this.sprite.w / 2;
     const halfHeight = this.sprite.h / 2;
@@ -133,6 +176,7 @@ export class Player {
     const right = keyboard.pressing('right') || keyboard.pressing('d');
     const jumpPressed = keyboard.presses('up') || keyboard.presses('w') || keyboard.presses('space');
     const jumpHeld    = keyboard.pressing('up') || keyboard.pressing('w') || keyboard.pressing('space');
+    const attack = keyboard.pressing('p')
 
     // Jump buffer: remember jump press for 120ms so pressing slightly before landing still works
     if (jumpPressed) {
@@ -166,6 +210,35 @@ export class Player {
     } else if (!arcActive) {
       this.sprite.vel.x *= this.isGrounded ? 0.72 : 0.92;
     }
+
+    // Attack
+    if (attack && !this.attackAnimation) {
+      this.sprite.changeAni('MCattackani');
+      this.sprite.ani.frame = 0;
+      this.sprite.ani.loop = false;
+      this.sprite.ani.play();
+      this.attackAnimation = true;
+    }
+
+    // While attacking: check for enemies in range, then reset when animation finishes
+    if (this.attackAnimation && this.sprite.ani.frame > 3) {
+      for (const enemy of enemies) {
+        if (enemy.sprite.deleted) continue;
+        const dx = this.sprite.x - enemy.sprite.x;
+        const dy = this.sprite.y - enemy.sprite.y;
+        if (Math.abs(dy) < 32) {
+          if ((this.sprite.scale.x > 0 && dx < 0) || (this.sprite.scale.x < 0 && dx > 0)) {
+            if (Math.abs(dx) < 48) {
+              enemy.sprite.delete();
+            }
+          }
+        }
+      }
+    }
+
+      if (this.sprite.ani.frame >= this.sprite.ani.lastFrame) {
+        this.attackAnimation = false;
+      }
 
     // Wall slide: pressing into a wall while airborne caps fall speed
     const pressingTowardWall = (effectiveWall === 1 && left) || (effectiveWall === -1 && right);
@@ -230,7 +303,7 @@ export class Player {
     }
 
     // Animate walking or idle when on the ground
-    if (!this.jumpAnimation && !this.wallClimbAnimation) {
+    if (!this.jumpAnimation && !this.wallClimbAnimation && !this.attackAnimation) {
       if (this.isGrounded && Math.abs(this.sprite.vel.x) > 0.5) {
         this.sprite.changeAni('MaskedMCWalking');
         this.walkAnimation = true;
@@ -252,10 +325,7 @@ export class Player {
 
     // Respawn if fallen off the map
     if (this.sprite.y > this.spawnY + 600) {
-      this.sprite.x = this.spawnX;
-      this.sprite.y = this.spawnY;
-      this.sprite.vel.x = 0;
-      this.sprite.vel.y = 0;
+      this.die();
     }
 
     // Terminal velocity: cap fall speed so player can't clip through platforms
