@@ -1,13 +1,26 @@
 export class Player {
   constructor(x, y, groundGroup) {
-    this.sprite = new Sprite(x, y, 20, 20, 'd');
+    this.sprite = new Sprite(x, y, 32, 32, 'd');
     this.sprite.rotationLock = true;
     this.sprite.friction = 0;
     this.sprite.bounciness = 0;
     this.sprite.color = '#e74c3c';
     this.sprite.stroke = '#c0392b';
     this.sprite.strokeWeight = 2;
-
+    this.sprite.addAni('Sprites/MaskedMCIdle.png', 2, '32x32')
+    this.sprite.addAni('Sprites/MaskedMCJump.png', 3, '32x32')
+    this.sprite.addAni('Sprites/MaskedMCWalking.png', 7, '32x32')
+    this.sprite.anis.MaskedMCIdle.frameDelay = 10;
+    this.sprite.anis.MaskedMCJump.frameDelay = 10;
+    this.sprite.anis.MaskedMCWalking.frameDelay = 6;
+    // No need to scale after this
+    // if you scale sprite after this it applies on top (stacks)
+    for (const key of ['MaskedMCIdle', 'MaskedMCJump', 'MaskedMCWalking']) {
+      this.sprite.anis[key].scale.x = 32 / 19;
+      this.sprite.anis[key].scale.y = 32 / 19;
+    }
+    this.sprite.changeAni('MaskedMCIdle');
+    // this.sprite.debug = true
     this.spawnX = x;
     this.spawnY = y;
     this.groundGroup = groundGroup;
@@ -17,12 +30,12 @@ export class Player {
     this.jumpPower = 9;
     this.cameraSpeed = 0.1;
 
-    // Coyote time
-    this.coyoteTime = 120;
+    // Edge jump grace time
+    this.edgeJumpGraceMs = 150;
     this.lastGroundedTime = 0;
 
     // Jump buffer
-    this.jumpBufferTime = 100;
+    this.jumpBufferTime = 120;
     this.lastJumpPressTime = 0;
 
     // Wall slide
@@ -41,76 +54,107 @@ export class Player {
     this.lastWallDir = 0;
 
     this.isGrounded = false;
+    this.jumpAnimation = false;
+    this.walkAnimation = false;
+    this.idleAnimation = true;
   }
 
   update() {
-    const hw = 10, hh = 10;
-    const btm = this.sprite.y + hh;
-    const top = this.sprite.y - hh;
-    const l   = this.sprite.x - hw;
-    const r   = this.sprite.x + hw;
+    // Player edge positions (sprite is 32x32, centered)
+    const halfWidth  = this.sprite.w / 2;
+    const halfHeight = this.sprite.h / 2;
+    const playerBottom = this.sprite.y + halfHeight;
+    const playerTop    = this.sprite.y - halfHeight;
+    const playerLeft   = this.sprite.x - halfWidth;
+    const playerRight  = this.sprite.x + halfWidth;
 
     const now = Date.now();
 
+    // Check if player is on ground or touching a wall by comparing edges to every platform
     this.isGrounded = false;
-    let onWall = 0;
+    let onWall = 0; // 0 = none, +1 = wall on left, -1 = wall on right
 
     for (const plat of this.groundGroup) {
-      const pL = plat.x - plat.w / 2;
-      const pR = plat.x + plat.w / 2;
-      const pT = plat.y - plat.h / 2;
-      const pB = plat.y + plat.h / 2;
+      const platLeft   = plat.x - plat.w / 2;
+      const platRight  = plat.x + plat.w / 2;
+      const platTop    = plat.y - plat.h / 2;
+      const platBottom = plat.y + plat.h / 2;
 
-      if (!this.isGrounded && btm >= pT - 4 && btm <= pT + 5 &&
-          r > pL && l < pR && this.sprite.vel.y >= 0) {
+      const horizontalOverlap = playerRight > platLeft + 1 && playerLeft < platRight - 1;
+
+      // Grounded if bottom is near platform top and not jumping upward
+      if (!this.isGrounded && horizontalOverlap &&
+          playerBottom >= platTop - 6 && playerBottom <= platTop + 8 &&
+          this.sprite.vel.y >= -1) {
         this.isGrounded = true;
       }
 
+      // Wall detected if player's side is within 5px of a platform edge while airborne
       if (!onWall && !this.isGrounded) {
-        if (Math.abs(l - pR) < 3 && btm > pT + 2 && top < pB - 2) onWall =  1;
-        else if (Math.abs(r - pL) < 3 && btm > pT + 2 && top < pB - 2) onWall = -1;
+        const verticalOverlap = playerBottom > platTop + 2 && playerTop < platBottom - 2;
+        if (Math.abs(playerLeft - platRight) < 5 && verticalOverlap) onWall =  1;
+        else if (Math.abs(playerRight - platLeft) < 5 && verticalOverlap) onWall = -1;
       }
     }
 
+    // On landing: save timestamp for edge jump grace period, cancel wall jump arc, stop downward velocity
     if (this.isGrounded) {
       this.lastGroundedTime = now;
-      this.lastWallJumpTime = 0; // landing cancels any residual wall jump force
+      this.lastWallJumpTime = 0;
       this.wallJumpForceDir = 0;
+      if (this.sprite.vel.y > 0) {
+        this.sprite.vel.y = 0;
+      }
     }
 
-    const coyoteOk = (now - this.lastGroundedTime) < this.coyoteTime && this.sprite.vel.y >= 0;
+    // Edge jump grace time: allow jumping for 150ms after leaving the ground
+    const edgeJumpAllowed = !this.isGrounded &&
+      this.lastGroundedTime > 0 &&
+      (now - this.lastGroundedTime) < this.edgeJumpGraceMs &&
+      this.sprite.vel.y >= 0;
 
+    // Block re-grabbing the same wall right after wall-jumping off it
+    // Not really necessary but we will keep it
     const reGrabBlocked = (now - this.lastWallJumpTime) < this.reGrabCooldown &&
                           onWall === this.lastWallDir;
     const effectiveWall = reGrabBlocked ? 0 : onWall;
 
-    // Hitting a *different* wall (one not filtered by the regrab cooldown) ends the arc
+
+    // Touching a new wall cancels the wall jump arc
     if (effectiveWall && this.wallJumpForceDir !== 0) {
       this.wallJumpForceDir = 0;
     }
 
-    const left  = keyboard.ArrowLeft  || keyboard.A;
-    const right = keyboard.ArrowRight || keyboard.D;
-    const jumpPressed = keyboard.presses('ArrowUp') || keyboard.presses('W') || keyboard.presses('Space');
-    const jumpHeld    = keyboard.ArrowUp || keyboard.W || keyboard.Space;
+    // Read keyboard input (held = continuous, presses = first frame only)
+    const left  = keyboard.pressing('left')  || keyboard.pressing('a');
+    const right = keyboard.pressing('right') || keyboard.pressing('d');
+    const jumpPressed = keyboard.presses('up') || keyboard.presses('w') || keyboard.presses('space');
+    const jumpHeld    = keyboard.pressing('up') || keyboard.pressing('w') || keyboard.pressing('space');
 
-    if (jumpPressed) this.lastJumpPressTime = now;
+    // Jump buffer: remember jump press for 120ms so pressing slightly before landing still works
+    if (jumpPressed) {
+      this.lastJumpPressTime = now;
+      this.sprite.changeAni('MaskedMCJump');
+      this.sprite.ani.frame = 0;
+      this.sprite.ani.play();
+      this.jumpAnimation = true;
+    }
     const jumpBufferOk = (now - this.lastJumpPressTime) < this.jumpBufferTime;
 
+    // Wall jump arc: apply decaying horizontal push away from the wall
     const wallJumpAge = now - this.lastWallJumpTime;
     const inArc = !this.isGrounded && this.wallJumpForceDir !== 0;
 
-    // --- Drive horizontal velocity directly with an exponential decay curve (runs first so input can nudge it) ---
     if (inArc) {
       const decayedVx = this.wallJumpPeakVx * Math.exp(-this.wallJumpDecay * wallJumpAge);
       if (decayedVx < this.wallJumpEndVx) {
-        this.wallJumpForceDir = 0; // arc ends, normal air control resumes next frame
+        this.wallJumpForceDir = 0;
       } else {
         this.sprite.vel.x = this.wallJumpForceDir * decayedVx;
       }
     }
 
-    // --- Horizontal input: reduced influence during the arc, full air control otherwise ---
+    // Horizontal movement: full control on ground, reduced during wall jump arc, moderate in air
     const arcActive = this.wallJumpForceDir !== 0 && !this.isGrounded;
     if (left || right) {
       const targetVx = left ? -this.speed : this.speed;
@@ -120,7 +164,7 @@ export class Player {
       this.sprite.vel.x *= this.isGrounded ? 0.72 : 0.92;
     }
 
-    // --- Wall slide: pressing into wall slows descent ---
+    // Wall slide: pressing into a wall while airborne caps fall speed
     const pressingTowardWall = (effectiveWall === 1 && left) || (effectiveWall === -1 && right);
     if (effectiveWall && !this.isGrounded && pressingTowardWall) {
       if (this.sprite.vel.y > this.wallSlideMaxSpeed) {
@@ -128,12 +172,21 @@ export class Player {
       }
     }
 
-    // --- Ground jump (coyote + buffer) ---
-    if ((this.isGrounded || coyoteOk) && jumpBufferOk) {
+    // Ground jump (uses edge jump grace period + jump buffer) or wall jump (pushes away from wall)
+    // Skip player jump if a jump pad just bounced us — prevents velocity stacking
+    if (this.sprite._jumpPadBounce) {
+      this.sprite._jumpPadBounce = false;
+      this._lastJumpPadTime = now;
+      this.lastJumpPressTime = 0;
+      this.lastGroundedTime = 0;
+    }
+
+    const recentJumpPad = (now - (this._lastJumpPadTime || 0)) < 300;
+
+    if (!recentJumpPad && (this.isGrounded || edgeJumpAllowed) && jumpBufferOk) {
       this.sprite.vel.y = -this.jumpPower;
       this.lastGroundedTime = 0;
       this.lastJumpPressTime = 0;
-    // --- Wall jump: set vertical, reset horizontal, start decaying force ---
     } else if (effectiveWall && !this.isGrounded && jumpBufferOk) {
       this.sprite.vel.y = -this.wallJumpPower;
       this.sprite.vel.x = effectiveWall * this.wallJumpPeakVx;
@@ -143,25 +196,56 @@ export class Player {
       this.lastJumpPressTime = 0;
     }
 
-    // --- Variable jump height ---
-    if (!jumpHeld && this.sprite.vel.y < -3) {
+    // Variable jump height: releasing jump early cuts upward velocity for shorter hops
+    // Don't cut velocity during a jump pad bounce
+    if (!jumpHeld && this.sprite.vel.y < -3 && !recentJumpPad) {
       this.sprite.vel.y *= 0.85;
     }
 
+    // Hold jump animation on last frame while airborne, return to idle/walk on landing
+    if (this.jumpAnimation) {
+      if (this.isGrounded && this.sprite.vel.y >= 0) {
+        this.jumpAnimation = false;
+      } else if (this.sprite.ani.frame >= this.sprite.ani.lastFrame) {
+        this.sprite.ani.pause();
+      }
+    }
+
+    // Animate walking or idle when on the ground
+    if (!this.jumpAnimation) {
+      if (this.isGrounded && Math.abs(this.sprite.vel.x) > 0.5) {
+        this.sprite.changeAni('MaskedMCWalking');
+        this.walkAnimation = true;
+      } else if (this.isGrounded) {
+        this.sprite.changeAni('MaskedMCIdle');
+        this.idleAnimation = true;
+      }
+    }
+
+    // We flip the image based on the direction
+    // No need to do 32/19 scale because the ani is already scaled to that so adding it here would cause them to stack
+    if (left) this.sprite.scale.x = -1;
+    else if (right) this.sprite.scale.x = 1;
+      
+
+
+    // Smooth camera follow on both axes
     this._followCamera(this.sprite.x + 10, this.sprite.y + 10, this.cameraSpeed);
 
-    if (this.sprite.y > 1000) {
+    // Respawn if fallen off the map
+    if (this.sprite.y > this.spawnY + 600) {
       this.sprite.x = this.spawnX;
       this.sprite.y = this.spawnY;
       this.sprite.vel.x = 0;
       this.sprite.vel.y = 0;
     }
 
+    // Terminal velocity: cap fall speed so player can't clip through platforms
     this.sprite.vel.y = Math.min(this.sprite.vel.y, 13);
   }
 
   _followCamera(targetX, targetY, speed) {
     camera.x += (targetX - camera.x) * speed;
-    // camera.y += (targetY - camera.y) * speed;
+    camera.y += (targetY - camera.y) * speed;
   }
 }
