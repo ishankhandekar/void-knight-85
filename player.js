@@ -13,15 +13,17 @@ export class Player {
     this.sprite.addAni('Sprites/MCwallclimb.png', 3, '32x32')
     this.sprite.addAni('Sprites/MaskedMCdeath.png', 23, '32x32')
     this.sprite.addAni('Sprites/MCattackani.png', 8, '32x32')
+    this.sprite.addAni('Sprites/MaskedMCSmashPart1.png', 6, '32x32');
     this.sprite.anis.MaskedMCIdle.frameDelay = 10;
     this.sprite.anis.MaskedMCJump.frameDelay = 10;
     this.sprite.anis.MaskedMCWalking.frameDelay = 6;
     this.sprite.anis.MCwallclimb.frameDelay = 8;
     this.sprite.anis.MaskedMCdeath.frameDelay = 5;
     this.sprite.anis.MCattackani.frameDelay = 4;
+    this.sprite.anis.MaskedMCSmashPart1.frameDelay = 2;
     // No need to scale after this
     // if you scale sprite after this it applies on top (stacks)
-    for (const key of ['MaskedMCIdle', 'MaskedMCJump', 'MaskedMCWalking', 'MCwallclimb', 'MaskedMCdeath', 'MCattackani']) {
+    for (const key of ['MaskedMCIdle', 'MaskedMCJump', 'MaskedMCWalking', 'MCwallclimb', 'MaskedMCdeath', 'MCattackani', 'MaskedMCSmashPart1']) {
       this.sprite.anis[key].scale.x = 32 / 19;
       this.sprite.anis[key].scale.y = 32 / 19;
     }
@@ -207,6 +209,7 @@ export class Player {
     const jumpPressed = keyboard.presses('up') || keyboard.presses('w') || keyboard.presses('space');
     const jumpHeld    = keyboard.pressing('up') || keyboard.pressing('w') || keyboard.pressing('space');
     const attack = keyboard.pressing('p')
+    const smash = keyboard.pressing('s') || keyboard.pressing('down');
 
     //Slime effect from level.js
     const onSlime = this.sprite._onSlime === true;
@@ -228,6 +231,15 @@ export class Player {
       this.jumpAnimation = true;
     }
     const jumpBufferOk = (now - this.lastJumpPressTime) < this.jumpBufferTime;
+
+    if (smash && this.jumpAnimation) {
+      if (this.sprite.ani.frame == this.sprite.ani.lastFrame) {
+        this.sprite.changeAni('MaskedMCSmashPart1');
+        this.sprite.ani.frame = 0;
+        this.sprite.ani.loop = false;
+        this.sprite.ani.play();
+      }
+    }
 
     // Wall jump arc: apply decaying horizontal push away from the wall
     const wallJumpAge = now - this.lastWallJumpTime;

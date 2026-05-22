@@ -7,11 +7,6 @@ export class Enemy {
     this.sprite.color = '#8e44ad';
     this.sprite.stroke = '#6c3483';
     this.sprite.strokeWeight = 2;
-    this.sprite.addAni('Sprites/Slugani.png', 4, '32x32');
-    this.sprite.anis.Slugani.frameDelay = 8;
-    this.sprite.anis.Slugani.scale.x = 24 / 30;
-    this.sprite.anis.Slugani.scale.y = 24 / 30;
-    this.sprite.changeAni('Slugani');
 
     this.groundGroup = groundGroup;
     this.patrolLeft = patrolLeft;

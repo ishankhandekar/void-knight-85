@@ -1,5 +1,5 @@
 import { Player } from './player.js';
-import { Enemy } from './enemy.js';
+import { Slug } from './slug.js';
 import { buildLevel } from './level.js';
 
 let bgImage;
@@ -29,9 +29,9 @@ function stopEnemies(enemies) {
 }
 // Enemies: patrol(x, y, leftBound, rightBound, platforms)
 const enemies = [
-  new Enemy(-220, 508, -300, -180, level.platforms),
-  new Enemy( 320, 348,  260,  380, level.platforms),
-  new Enemy(-100, 108, -160,  -40, level.platforms),
+  new Slug(-220, 508, -300, -180, level.platforms),
+  new Slug( 320, 348,  260,  380, level.platforms),
+  new Slug(-100, 108, -160,  -40, level.platforms),
 ];
 
 // Use q5play's overlap system (same as spikes/jump pads) so physics separation
