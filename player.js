@@ -68,6 +68,8 @@ export class Player {
 
     this.isDying = false;
 
+    this.flyMode = false;
+
     // Back-reference so collision callbacks in level.js can call die()
     this.sprite._player = this;
   }
@@ -89,6 +91,34 @@ export class Player {
   }
 
   update(enemies) {
+    // Toggle fly mode with backtick
+    if (keyboard.presses('`')) {
+      this.flyMode = !this.flyMode;
+      if (this.flyMode) {
+        this.sprite.physics = 'kinematic';
+        this.sprite.vel.x = 0;
+        this.sprite.vel.y = 0;
+      } else {
+        this.sprite.physics = 'dynamic';
+        this.sprite.vel.x = 0;
+        this.sprite.vel.y = 0;
+      }
+    }
+
+    if (this.flyMode) {
+      const up    = keyboard.pressing('up')    || keyboard.pressing('w');
+      const down  = keyboard.pressing('down')  || keyboard.pressing('s');
+      const left  = keyboard.pressing('left')  || keyboard.pressing('a');
+      const right = keyboard.pressing('right') || keyboard.pressing('d');
+      const flySpeed = this.speed * 2.5;
+      this.sprite.vel.x = right ? flySpeed : left ? -flySpeed : 0;
+      this.sprite.vel.y = down  ? flySpeed : up   ? -flySpeed : 0;
+      if (left)  this.sprite.scale.x = -1;
+      if (right) this.sprite.scale.x =  1;
+      this._followCamera(this.sprite.x + 10, this.sprite.y + 10, this.cameraSpeed);
+      return;
+    }
+
     // While dying: wait for the animation to finish, then respawn
     if (this.isDying) {
       if (this.sprite.ani.frame >= this.sprite.ani.lastFrame) {
@@ -339,7 +369,7 @@ export class Player {
     this._followCamera(this.sprite.x + 10, this.sprite.y + 10, this.cameraSpeed);
 
     // Respawn if fallen off the map
-    if (this.sprite.y > this.spawnY + 600) {
+    if (!this.flyMode && this.sprite.y > this.spawnY + 600) {
       this.die();
     }
 

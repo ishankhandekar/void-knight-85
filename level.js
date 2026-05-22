@@ -234,7 +234,7 @@ export function buildLevel(canvasHeight) {
   });
 
   spikeGroup.overlaps(allSprites, (spike, sprite) => {
-    if (!sprite._player) return;
+    if (!sprite._player || sprite._player.flyMode) return;
     sprite._player.die();
   });
 

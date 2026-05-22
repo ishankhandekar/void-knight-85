@@ -4,6 +4,7 @@ import { buildLevel } from './level.js';
 
 let bgImage;
 let levelComplete = false;
+let debugMode = false;
 
 await Canvas();
 displayMode(NORMAL, PIXELATED);
@@ -38,7 +39,7 @@ const enemies = [
 // doesn't prevent detection. overlaps() fires without resolving collision physics.
 for (const enemy of enemies) {
   enemy.sprite.overlaps(player.sprite, (enemySprite, playerSprite) => {
-    if (player.isDying || enemySprite.deleted) return;
+    if (player.isDying || player.flyMode || enemySprite.deleted) return;
     // Stomp: player falling onto top of enemy
     if (playerSprite.vel.y > 0 && playerSprite.y < enemySprite.y - 4) {
       enemySprite.delete();
@@ -54,6 +55,12 @@ const PARALLAX_X = 0.05;
 const PARALLAX_Y = 0.03;
 
 q5.update = function () {
+  // Toggle collision debug with ~ (shift+backtick)
+  if (keyboard.presses('~')) {
+    debugMode = !debugMode;
+    allSprites.debug = debugMode;
+  }
+
   background('#000000');
 
   if (bgImage && bgImage.width > 0 && bgImage.height > 0) {
@@ -90,7 +97,7 @@ q5.update = function () {
     // Check if player reached the door
     const dx = player.sprite.x - level.door.x;
     const dy = player.sprite.y - level.door.y;
-    if (Math.abs(dx) < 25 && Math.abs(dy) < 30) {
+    if (!player.flyMode && Math.abs(dx) < 25 && Math.abs(dy) < 30) {
       levelComplete = true;
     }
   }
@@ -120,4 +127,8 @@ q5.update = function () {
       player.sprite.vel.y = 0;
     }
   }
+
+  // Sync debug HUD tags in the HTML overlay
+  document.getElementById('hud-fly').style.display   = player.flyMode ? 'block' : 'none';
+  document.getElementById('hud-debug').style.display = debugMode      ? 'block' : 'none';
 };
