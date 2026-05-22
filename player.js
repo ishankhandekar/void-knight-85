@@ -178,6 +178,17 @@ export class Player {
     const jumpHeld    = keyboard.pressing('up') || keyboard.pressing('w') || keyboard.pressing('space');
     const attack = keyboard.pressing('p')
 
+    //Slime effect from level.js
+    const onSlime = this.sprite._onSlime === true;
+    this.sprite._onSlime = false;
+
+    const currentSpeed = onSlime ?
+    this.speed * 0.45 : this.speed;
+    const currentJumpPower = onSlime ?
+    this.jumpPower * 0.55 : this.jumpPower;
+    const currentWallJumpPower = onSlime ?
+    this.wallJumpPower * 0.55 : this.wallJumpPower;
+
     // Jump buffer: remember jump press for 120ms so pressing slightly before landing still works
     if (jumpPressed) {
       this.lastJumpPressTime = now;
@@ -204,7 +215,9 @@ export class Player {
     // Horizontal movement: full control on ground, reduced during wall jump arc, moderate in air
     const arcActive = this.wallJumpForceDir !== 0 && !this.isGrounded;
     if (left || right) {
-      const targetVx = left ? -this.speed : this.speed;
+      //const targetVx = left ? -this.speed : this.speed;
+      const targetVx = left ?
+        -currentSpeed : currentSpeed;
       const accel = this.isGrounded ? 1.0 : (arcActive ? 0.2 : 0.55);
       this.sprite.vel.x += (targetVx - this.sprite.vel.x) * accel;
     } else if (!arcActive) {
@@ -260,11 +273,13 @@ export class Player {
     const recentJumpPad = (now - (this._lastJumpPadTime || 0)) < 300;
 
     if (!recentJumpPad && (this.isGrounded || edgeJumpAllowed) && jumpBufferOk) {
-      this.sprite.vel.y = -this.jumpPower;
+      //this.sprite.vel.y = -this.jumpPower;
+      this.sprite.vel.y = - currentJumpPower;
       this.lastGroundedTime = 0;
       this.lastJumpPressTime = 0;
     } else if (effectiveWall && !this.isGrounded && jumpBufferOk) {
-      this.sprite.vel.y = -this.wallJumpPower;
+      //this.sprite.vel.y = -this.wallJumpPower;
+      this.sprite.vel.y = - currentWallJumpPower;
       this.sprite.vel.x = effectiveWall * this.wallJumpPeakVx;
       this.wallJumpForceDir = effectiveWall;
       this.lastWallJumpTime = now;

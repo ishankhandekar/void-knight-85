@@ -16,6 +16,10 @@ world.gravity.y = 20;
 const level = buildLevel(height);
 const player = new Player(level.spawnX, level.spawnY, level.platforms);
 
+//Start the camera on the player immediately
+camera.x = level.spawnX + 10;
+camera.y = level.spawnY + 10;
+
 function stopEnemies(enemies) {
   for (const enemy of enemies) {
     enemy.sprite.vel.x = 0;

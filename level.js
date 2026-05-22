@@ -4,139 +4,241 @@ export function buildLevel(canvasHeight) {
   const jumpPadGroup = new Group();
   const spikeGroup = new Group();
 
-  function plat(x, y, w, h) {
-    const p = new platformGroup.Sprite(x, y, w, h);
-    p.physics = STATIC;
-    p.color = '#25435f';
-    p.stroke = '#3d4a5a';
-    p.strokeWeight = 1;
-    p.bounciness = 0;
-    return p;
+  const BLOCK_SIZE = 40;
+
+  // Only affect the player, not platforms, hazards, or the door.
+  function isPlayerTarget(sprite) {
+    return sprite && sprite.rotationLock === true;
   }
 
-  // === DUNGEON BORDER WALLS ===
-  plat(0, 700, 1500, 40);
-  plat(0, -280, 1500, 40);
-  plat(-730, 140, 40, 1080);
-  plat(730, 140, 40, 1080);
-
-  // === CHAMBER 1: Starting Room (bottom) ===
-  plat(-450, 500, 400, 20);
-  plat(-100, 500, 200, 20);
-  plat(250, 500, 250, 20);
-  plat(550, 500, 200, 20);
-  // Chamber ceiling with opening on the right side
-  plat(-300, 420, 600, 20);
-
-  // === CHAMBER 2: Spike Gauntlet ===
-  plat(-550, 380, 160, 20);
-  plat(-280, 350, 140, 20);
-  plat(0, 370, 160, 20);
-  plat(280, 340, 160, 20);
-  plat(520, 360, 180, 20);
-  // Chamber ceiling with opening on the left side
-  plat(150, 270, 700, 20);
-
-  // === CHAMBER 3: Wall Jump Corridor ===
-  plat(-550, 240, 160, 20);
-  plat(-370, 190, 20, 160);
-  plat(-310, 190, 20, 160);
-  plat(-150, 220, 140, 20);
-  plat(100, 200, 160, 20);
-  plat(350, 230, 140, 20);
-  plat(580, 210, 160, 20);
-  // Chamber ceiling with opening on the right side
-  plat(-300, 120, 600, 20);
-
-  // === CHAMBER 4: Jump Pad Ascent ===
-  plat(-550, 80, 160, 20);
-  plat(-250, 60, 160, 20);
-  plat(50, 40, 140, 20);
-  plat(350, 20, 160, 20);
-  plat(580, 50, 160, 20);
-  // Chamber ceiling with opening on the left side
-  plat(100, -50, 750, 20);
-
-  // === CHAMBER 5: Door Room (top) ===
-  plat(-550, -80, 160, 20);
-  plat(-280, -110, 160, 20);
-  plat(0, -140, 140, 20);
-  plat(280, -170, 160, 20);
-  plat(520, -200, 200, 20);
-
-  // === SPIKES ===
-  const spikePositions = [
-    { x: 0, y: 360, w: 60, h: 15 },
-    { x: 280, y: 330, w: 60, h: 15 },
-    { x: -150, y: 210, w: 50, h: 15 },
-    { x: 0, y: -150, w: 50, h: 15 },
-  ];
-  for (const s of spikePositions) {
-    const spike = new spikeGroup.Sprite(s.x, s.y, s.w, s.h);
-    spike.physics = STATIC;
-    spike.color = '#e74c3c';
-    spike.stroke = '#c0392b';
-    spike.strokeWeight = 1;
+  // =========================================================
+  // REQUIRED FUNCTION #1
+  // Creates one block at the given x and y position.
+  // =========================================================
+  function blocks(x, y) {
+    const b = new platformGroup.Sprite(x, y, BLOCK_SIZE, BLOCK_SIZE);
+    b.physics = STATIC;
+    b.color = '#1b3148';
+    b.stroke = '#7fb7dc';
+    b.strokeWeight = 2;
+    b.bounciness = 0;
+    return b;
   }
 
-  // === SLIME ===
-  const slimePositions = [
-    { x: 350, y: 222, w: 60, h: 10 },
-  ];
-  for (const s of slimePositions) {
-    const sl = new slimeGroup.Sprite(s.x, s.y, s.w, s.h);
+  // =========================================================
+  // REQUIRED FUNCTION #2
+  // Creates a line of blocks using a for loop.
+  //
+  // direction can be:
+  // "right", "left", "up", or "down"
+  // =========================================================
+  function blockLine(x, y, block_count, direction) {
+    for (let i = 0; i < block_count; i++) {
+      let blockX = x;
+      let blockY = y;
+
+      if (direction === "right") {
+        blockX = x + i * BLOCK_SIZE;
+      } else if (direction === "left") {
+        blockX = x - i * BLOCK_SIZE;
+      } else if (direction === "up") {
+        blockY = y - i * BLOCK_SIZE;
+      } else if (direction === "down") {
+        blockY = y + i * BLOCK_SIZE;
+      }
+
+      blocks(blockX, blockY);
+    }
+  }
+
+  // =========================================================
+  // HAZARD / SPECIAL BLOCK HELPERS
+  // =========================================================
+  function spike(x, y, w = 50, h = 16) {
+    const s = new spikeGroup.Sprite(x, y, w, h);
+    s.physics = STATIC;
+    s.color = '#e85d4f';
+    s.stroke = '#9f3029';
+    s.strokeWeight = 2;
+    return s;
+  }
+
+  function slime(x, y, w = 80, h = 12) {
+    const sl = new slimeGroup.Sprite(x, y, w, h);
     sl.physics = STATIC;
-    sl.color = '#2ecc71';
-    sl.stroke = '#27ae60';
-    sl.strokeWeight = 1;
+    sl.color = '#39e58c';
+    sl.stroke = '#17824e';
+    sl.strokeWeight = 2;
+    return sl;
   }
 
-  // === JUMP PADS ===
-  const jumpPadPositions = [
-    { x: -250, y: 52, w: 50, h: 10 },
-    { x: 100, y: 192, w: 80, h: 10 },
-    { x: 350, y: 12, w: 50, h: 10 },
-  ];
-  for (const j of jumpPadPositions) {
-    const jp = new jumpPadGroup.Sprite(j.x, j.y, j.w, j.h);
+  function jumpPad(x, y, w = 60, h = 12) {
+    const jp = new jumpPadGroup.Sprite(x, y, w, h);
     jp.physics = STATIC;
-    jp.color = '#f39c12';
-    jp.stroke = '#e67e22';
-    jp.strokeWeight = 1;
+    jp.color = '#f6b93b';
+    jp.stroke = '#bd7600';
+    jp.strokeWeight = 2;
+    return jp;
   }
 
-  // === DOOR ===
-  const doorSprite = new Sprite(550, -220, 30, 40);
+  // =========================================================
+  // OUTER BORDER
+  // Border blocks do not overlap with the interior platforms.
+  // =========================================================
+
+  blockLine(-680, 700, 35, "right"); // bottom floor
+  blockLine(-680, -300, 35, "right"); // top ceiling
+  blockLine(-720, -260, 24, "down"); // left wall
+  blockLine(720, -260, 24, "down"); // right wall
+
+  // =========================================================
+  // CHAMBER 1: SPAWN AREA
+  // Clear starter path upward. Each gap is at least 80px wide.
+  // =========================================================
+
+  blockLine(-640, 620, 7, "right"); // spawn floor
+  blockLine(-240, 620, 5, "right");
+  blockLine(120, 620, 5, "right");
+  blockLine(440, 620, 5, "right");
+
+  // starter steps near spawn
+  blocks(-480, 560);
+  blocks(-400, 500);
+  blocks(-320, 440);
+
+  // upper divider with a large opening near the left-middle
+  blockLine(-680, 380, 6, "right");
+  blockLine(-280, 380, 6, "right");
+  blockLine(240, 380, 9, "right");
+
+  // =========================================================
+  // CHAMBER 2: SPIKE GAUNTLET
+  // Platforms are spaced so the player can move between them.
+  // =========================================================
+
+  blockLine(-560, 320, 4, "right");
+  blockLine(-300, 300, 4, "right");
+  blockLine(-40, 320, 4, "right");
+  blockLine(240, 300, 4, "right");
+  blockLine(500, 320, 4, "right");
+
+  spike(-20, 296);
+  spike(260, 276);
+
+  // divider with a large left opening
+  blockLine(-120, 220, 7, "right");
+  blockLine(280, 220, 8, "right");
+
+  // =========================================================
+  // CHAMBER 3: WALL JUMP / SLIME ROOM
+  // Wall pillars do not intersect any horizontal block lines.
+  // There is a 120px gap between the wall-jump pillars.
+  // =========================================================
+
+  blockLine(-600, 160, 4, "right");
+
+  // wall jump pillars
+  blockLine(-420, 160, 4, "up");
+  blockLine(-260, 160, 4, "up");
+
+  blockLine(-60, 140, 4, "right");
+  blockLine(220, 160, 4, "right");
+  blockLine(500, 140, 4, "right");
+
+  slime(260, 136, 80, 12);
+  jumpPad(-20, 116, 60, 12);
+  spike(520, 116);
+
+  // divider with large right opening
+  blockLine(-680, 40, 8, "right");
+  blockLine(-240, 40, 7, "right");
+
+  // =========================================================
+  // CHAMBER 4: JUMP PAD ASCENT
+  // Jump pads make the taller vertical movement possible.
+  // =========================================================
+
+  blockLine(520, -20, 4, "right");
+  jumpPad(560, -44, 60, 12);
+
+  blockLine(260, -80, 4, "right");
+  blockLine(-20, -120, 4, "right");
+  jumpPad(20, -144, 60, 12);
+
+  blockLine(-320, -160, 4, "right");
+  blockLine(-600, -120, 4, "right");
+
+  // divider with a wide center opening
+  blockLine(-680, -220, 6, "right");
+  blockLine(240, -220, 11, "right");
+
+  // =========================================================
+  // CHAMBER 5: FINAL DOOR ROOM
+  // Final staircase to the door.
+  // =========================================================
+
+  blockLine(-480, -240, 4, "right");
+  blockLine(-200, -260, 4, "right");
+  blockLine(80, -240, 4, "right");
+  blockLine(360, -260, 6, "right");
+
+  // Door platform
+  blockLine(440, -220, 5, "right");
+
+  // =========================================================
+  // DOOR
+  // =========================================================
+
+  const doorSprite = new Sprite(560, -260, 36, 50);
   doorSprite.physics = STATIC;
-  doorSprite.color = '#f1c40f';
-  doorSprite.stroke = '#d4ac0d';
-  doorSprite.strokeWeight = 2;
+  doorSprite.color = '#f4d35e';
+  doorSprite.stroke = '#b8860b';
+  doorSprite.strokeWeight = 3;
   doorSprite.bounciness = 0;
 
-  // === SPAWN ===
-  const spawnX = -450;
-  const spawnY = 480;
+  // =========================================================
+  // SPAWN
+  // =========================================================
 
-  // === INTERACTIONS ===
-  // Kill upward velocity every frame the player is touching slime, preventing jumping
+  const spawnX = -560;
+  const spawnY = 580;
+
+  // =========================================================
+  // INTERACTIONS
+  // =========================================================
+
   slimeGroup.colliding(allSprites, (slime, sprite) => {
-    if (sprite !== slime && sprite.vel.y < 0) sprite.vel.y = 0;
+    if (!isPlayerTarget(sprite)) return;
+
+    sprite._onSlime = true;
+
+    // Slows horizontal movement.
+    sprite.vel.x *= 0.65;
+
+    // Reduces jump height while on slime.
+    if (sprite.vel.y < -3.5) {
+      sprite.vel.y = -3.5;
+    }
   });
 
-  // overlaps() instead of collides() so q5play doesn't resolve collision physics,
-  // which would zero out the upward velocity we're trying to set
   jumpPadGroup.overlaps(allSprites, (pad, sprite) => {
-    if (sprite !== pad && sprite.vel.y >= -2) {
+    if (!isPlayerTarget(sprite)) return;
+
+    if (sprite.vel.y >= -2) {
       sprite.vel.y = -15;
       sprite._jumpPadBounce = true;
     }
   });
 
   spikeGroup.overlaps(allSprites, (spike, sprite) => {
-    if (sprite !== spike && sprite !== doorSprite && sprite._player) {
-      sprite._player.die();
-    }
+    if (!sprite._player) return;
+    sprite._player.die();
   });
 
-  return { platforms: platformGroup, door: doorSprite, spawnX, spawnY };
+  return {
+    platforms: platformGroup,
+    door: doorSprite,
+    spawnX,
+    spawnY
+  };
 }
