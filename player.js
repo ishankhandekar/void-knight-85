@@ -10,7 +10,7 @@ export class Player {
     this.sprite.addAni('Sprites/MaskedMCIdle.png', 3, '32x32')
     this.sprite.addAni('Sprites/MaskedMCJump.png', 4, '32x32')
     this.sprite.addAni('Sprites/MaskedMCWalking.png', 8, '32x32')
-    this.sprite.addAni('Sprites/MCwallclimb.png', 4, '32x32')
+    this.sprite.addAni('Sprites/MCwallclimb.png', 3, '32x32')
     this.sprite.addAni('Sprites/MaskedMCdeath.png', 23, '32x32')
     this.sprite.addAni('Sprites/MCattackani.png', 8, '32x32')
     this.sprite.anis.MaskedMCIdle.frameDelay = 10;
