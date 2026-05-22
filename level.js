@@ -22,6 +22,9 @@ export function buildLevel(canvasHeight) {
     b.stroke = '#7fb7dc';
     b.strokeWeight = 2;
     b.bounciness = 0;
+    b.img = 'Sprites/textures/platformtexture.png';
+    b.img.scale.x = BLOCK_SIZE / 32;
+    b.img.scale.y = BLOCK_SIZE / 32;
     return b;
   }
 
