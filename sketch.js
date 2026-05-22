@@ -29,10 +29,9 @@ function stopEnemies(enemies) {
 }
 // Enemies: patrol(x, y, leftBound, rightBound, platforms)
 const enemies = [
-  new Enemy(-100, 480, -200,  100, level.platforms), // Chamber 1 ground
-  new Enemy( 280, 320,  200,  400, level.platforms), // Chamber 2 platform
-  new Enemy( 100, 180,   20,  200, level.platforms), // Chamber 3 platform
-  new Enemy( 350,   0,  280,  430, level.platforms), // Chamber 4 platform
+  new Enemy(-220, 508, -300, -180, level.platforms),
+  new Enemy( 320, 348,  260,  380, level.platforms),
+  new Enemy(-100, 108, -160,  -40, level.platforms),
 ];
 
 // Use q5play's overlap system (same as spikes/jump pads) so physics separation

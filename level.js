@@ -5,6 +5,10 @@ export function buildLevel(canvasHeight) {
   const spikeGroup = new Group();
 
   const BLOCK_SIZE = 40;
+  const BLOCK_TEXTURES = {
+    platform: 'Sprites/textures/platformtexture.png',
+    wall: 'Sprites/textures/walltexture.png'
+  };
 
   // Only affect the player, not platforms, hazards, or the door.
   function isPlayerTarget(sprite) {
@@ -15,16 +19,21 @@ export function buildLevel(canvasHeight) {
   // REQUIRED FUNCTION #1
   // Creates one block at the given x and y position.
   // =========================================================
-  function blocks(x, y) {
+  function blocks(x, y, texture = 'platform') {
     const b = new platformGroup.Sprite(x, y, BLOCK_SIZE, BLOCK_SIZE);
     b.physics = STATIC;
     b.color = '#1b3148';
     b.stroke = '#7fb7dc';
     b.strokeWeight = 2;
     b.bounciness = 0;
-    b.img = 'Sprites/textures/platformtexture.png';
-    b.img.scale.x = BLOCK_SIZE / 32;
-    b.img.scale.y = BLOCK_SIZE / 32;
+
+    const texturePath = BLOCK_TEXTURES[texture] ?? texture;
+    if (texturePath) {
+      b.img = texturePath;
+      b.img.scale.x = BLOCK_SIZE / 32;
+      b.img.scale.y = BLOCK_SIZE / 32;
+    }
+
     return b;
   }
 
@@ -35,7 +44,7 @@ export function buildLevel(canvasHeight) {
   // direction can be:
   // "right", "left", "up", or "down"
   // =========================================================
-  function blockLine(x, y, block_count, direction) {
+  function blockLine(x, y, block_count, direction, texture = 'platform') {
     for (let i = 0; i < block_count; i++) {
       let blockX = x;
       let blockY = y;
@@ -46,11 +55,13 @@ export function buildLevel(canvasHeight) {
         blockX = x - i * BLOCK_SIZE;
       } else if (direction === "up") {
         blockY = y - i * BLOCK_SIZE;
+        texture = 'wall'; // Use wall texture for vertical blocks
       } else if (direction === "down") {
         blockY = y + i * BLOCK_SIZE;
+        texture = 'wall'; // Use wall texture for vertical blocks
       }
 
-      blocks(blockX, blockY);
+      blocks(blockX, blockY, texture);
     }
   }
 
@@ -69,8 +80,8 @@ export function buildLevel(canvasHeight) {
   function slime(x, y, w = 80, h = 12) {
     const sl = new slimeGroup.Sprite(x, y, w, h);
     sl.physics = STATIC;
-    sl.color = '#39e58c';
-    sl.stroke = '#17824e';
+    sl.color = '#f6b93b'; 
+    sl.stroke = '#bd7600'; 
     sl.strokeWeight = 2;
     return sl;
   }
@@ -78,8 +89,8 @@ export function buildLevel(canvasHeight) {
   function jumpPad(x, y, w = 60, h = 12) {
     const jp = new jumpPadGroup.Sprite(x, y, w, h);
     jp.physics = STATIC;
-    jp.color = '#f6b93b';
-    jp.stroke = '#bd7600';
+    jp.color = '#39e58c'; 
+    jp.stroke = '#17824e'; 
     jp.strokeWeight = 2;
     return jp;
   }
@@ -89,116 +100,54 @@ export function buildLevel(canvasHeight) {
   // Border blocks do not overlap with the interior platforms.
   // =========================================================
 
-  blockLine(-680, 700, 35, "right"); // bottom floor
-  blockLine(-680, -300, 35, "right"); // top ceiling
-  blockLine(-720, -260, 24, "down"); // left wall
-  blockLine(720, -260, 24, "down"); // right wall
+  blockLine(-680, 700, 35, "right", "wall"); // bottom floor
+  blockLine(-680, -300, 35, "right", "wall"); // top ceiling
+  blockLine(-720, -260, 24, "down", "wall"); // left wall
+  blockLine(720, -260, 24, "down", "wall"); // right wall
 
   // =========================================================
-  // CHAMBER 1: SPAWN AREA
-  // Clear starter path upward. Each gap is at least 80px wide.
+  // MAIN PATH
+  // Interior platforms stay off the border and use 40px grid spacing.
   // =========================================================
 
-  blockLine(-640, 620, 7, "right"); // spawn floor
-  blockLine(-240, 620, 5, "right");
-  blockLine(120, 620, 5, "right");
-  blockLine(440, 620, 5, "right");
+  const START_ROW = 620;
+  const PLATFORM_ROW_GAP = BLOCK_SIZE * 2;
 
-  // starter steps near spawn
-  blocks(-480, 560);
-  blocks(-400, 500);
-  blocks(-320, 440);
+  blockLine(-560, START_ROW, 5, "right"); // spawn floor
+  blockLine(-300, START_ROW - PLATFORM_ROW_GAP, 4, "right");
+  blockLine(-380, START_ROW - PLATFORM_ROW_GAP - BLOCK_SIZE * 3, 7, "up");
+  blockLine(-260, START_ROW - PLATFORM_ROW_GAP - BLOCK_SIZE * 3, 7, "up");
+  blockLine(-20, START_ROW - PLATFORM_ROW_GAP * 2, 4, "right");
+  blockLine(260, START_ROW - PLATFORM_ROW_GAP * 3, 4, "right");
+  blockLine(480, START_ROW - PLATFORM_ROW_GAP * 4, 4, "right");
 
-  // upper divider with a large opening near the left-middle
-  blockLine(-680, 380, 6, "right");
-  blockLine(-280, 380, 6, "right");
-  blockLine(240, 380, 9, "right");
+  spike(320, START_ROW - PLATFORM_ROW_GAP * 3 - 24);
 
-  // =========================================================
-  // CHAMBER 2: SPIKE GAUNTLET
-  // Platforms are spaced so the player can move between them.
-  // =========================================================
+  blockLine(160, START_ROW - PLATFORM_ROW_GAP * 5, 4, "right");
+  slime(220, START_ROW - PLATFORM_ROW_GAP * 5 - 24, 80, 12);
 
-  blockLine(-560, 320, 4, "right");
-  blockLine(-300, 300, 4, "right");
-  blockLine(-40, 320, 4, "right");
-  blockLine(240, 300, 4, "right");
-  blockLine(500, 320, 4, "right");
+  blockLine(-160, START_ROW - PLATFORM_ROW_GAP * 6, 4, "right");
+  jumpPad(-100, START_ROW - PLATFORM_ROW_GAP * 6 - 24, 60, 12);
+  blocks(40, START_ROW - PLATFORM_ROW_GAP * 8);
+  blocks(120, START_ROW - PLATFORM_ROW_GAP * 9);
 
-  spike(-20, 296);
-  spike(260, 276);
-
-  // divider with a large left opening
-  blockLine(-120, 220, 7, "right");
-  blockLine(280, 220, 8, "right");
-
-  // =========================================================
-  // CHAMBER 3: WALL JUMP / SLIME ROOM
-  // Wall pillars do not intersect any horizontal block lines.
-  // There is a 120px gap between the wall-jump pillars.
-  // =========================================================
-
-  blockLine(-600, 160, 4, "right");
-
-  // wall jump pillars
-  blockLine(-420, 160, 4, "up");
-  blockLine(-260, 160, 4, "up");
-
-  blockLine(-60, 140, 4, "right");
-  blockLine(220, 160, 4, "right");
-  blockLine(500, 140, 4, "right");
-
-  slime(260, 136, 80, 12);
-  jumpPad(-20, 116, 60, 12);
-  spike(520, 116);
-
-  // divider with large right opening
-  blockLine(-680, 40, 8, "right");
-  blockLine(-240, 40, 7, "right");
-
-  // =========================================================
-  // CHAMBER 4: JUMP PAD ASCENT
-  // Jump pads make the taller vertical movement possible.
-  // =========================================================
-
-  blockLine(520, -20, 4, "right");
-  jumpPad(560, -44, 60, 12);
-
-  blockLine(260, -80, 4, "right");
-  blockLine(-20, -120, 4, "right");
-  jumpPad(20, -144, 60, 12);
-
-  blockLine(-320, -160, 4, "right");
-  blockLine(-600, -120, 4, "right");
-
-  // divider with a wide center opening
-  blockLine(-680, -220, 6, "right");
-  blockLine(240, -220, 11, "right");
-
-  // =========================================================
-  // CHAMBER 5: FINAL DOOR ROOM
-  // Final staircase to the door.
-  // =========================================================
-
-  blockLine(-480, -240, 4, "right");
-  blockLine(-200, -260, 4, "right");
-  blockLine(80, -240, 4, "right");
-  blockLine(360, -260, 6, "right");
+  blockLine(-500, START_ROW - PLATFORM_ROW_GAP * 7, 4, "right");
+  blockLine(200, START_ROW - PLATFORM_ROW_GAP * 9, 4, "right");
 
   // Door platform
-  blockLine(440, -220, 5, "right");
+  blockLine(360, START_ROW - PLATFORM_ROW_GAP * 10, 7, "right");
 
   // =========================================================
   // DOOR
   // =========================================================
 
-  const doorSprite = new Sprite(560, -260, 36, 50);
+  const doorSprite = new Sprite(560, START_ROW - PLATFORM_ROW_GAP * 10 - 40, 36, 50);
   doorSprite.physics = STATIC;
   doorSprite.color = '#f4d35e';
   doorSprite.stroke = '#b8860b';
   doorSprite.strokeWeight = 3;
   doorSprite.bounciness = 0;
-
+  
   // =========================================================
   // SPAWN
   // =========================================================
