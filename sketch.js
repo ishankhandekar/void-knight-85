@@ -3,8 +3,13 @@ import { Slug } from './slug.js';
 import { buildLevel } from './level.js';
 
 let bgImage;
+let gameStarted = false;
 let levelComplete = false;
 let debugMode = false;
+let stopwatchStartTime = null;
+let stopwatchElapsedMs = 0;
+let stopwatchRunning = false;
+let stopwatchFinished = false;
 
 await Canvas();
 displayMode(NORMAL, PIXELATED);
@@ -29,9 +34,20 @@ function stopEnemies(enemies) {
 }
 // Enemies: patrol(x, y, leftBound, rightBound, platforms)
 const enemies = [
-  new Slug(-220, 508, -300, -180, level.platforms),
-  new Slug( 320, 348,  260,  380, level.platforms),
-  new Slug(-100, 108, -160,  -40, level.platforms),
+  new Slug(
+    level.movingPlatformSlug.x,
+    level.movingPlatformSlug.y,
+    level.movingPlatformSlug.left,
+    level.movingPlatformSlug.right,
+    level.platforms
+  ),
+  new Slug(
+    level.secondMovingPlatformSlug.x,
+    level.secondMovingPlatformSlug.y,
+    level.secondMovingPlatformSlug.left,
+    level.secondMovingPlatformSlug.right,
+    level.platforms
+  ),
 ];
 
 // Use q5play's overlap system (same as spikes/jump pads) so physics separation
@@ -52,6 +68,137 @@ for (const enemy of enemies) {
 
 const PARALLAX_X = 0.05;
 const PARALLAX_Y = 0.03;
+const stopwatchElement = document.getElementById('stopwatch');
+const startScreen = document.getElementById('start-screen');
+const levelCompleteScreen = document.getElementById('level-complete-screen');
+const levelCompleteScore = document.getElementById('level-complete-score');
+const levelCompleteTime = document.getElementById('level-complete-time');
+const levelCompleteRecords = document.getElementById('level-complete-records');
+const BEST_SCORE_KEY = 'retroRewindBestScore';
+const BEST_TIME_KEY = 'retroRewindBestTime';
+
+function formatStopwatch(milliseconds) {
+  const totalCentiseconds = Math.floor(milliseconds / 10);
+  const centiseconds = totalCentiseconds % 100;
+  const totalSeconds = Math.floor(totalCentiseconds / 100);
+  const seconds = totalSeconds % 60;
+  const minutes = Math.floor(totalSeconds / 60);
+
+  return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}.${String(centiseconds).padStart(2, '0')}`;
+}
+
+function stopwatchStartPressed() {
+  return keyboard.pressing('w') ||
+    keyboard.pressing('a') ||
+    keyboard.pressing('s') ||
+    keyboard.pressing('d') ||
+    keyboard.pressing('up') ||
+    keyboard.pressing('down') ||
+    keyboard.pressing('left') ||
+    keyboard.pressing('right') ||
+    keyboard.presses('`');
+}
+
+function startStopwatch() {
+  stopwatchStartTime = performance.now();
+  stopwatchRunning = true;
+}
+
+function stopStopwatch() {
+  if (!stopwatchRunning) return;
+
+  stopwatchElapsedMs = performance.now() - stopwatchStartTime;
+  stopwatchRunning = false;
+  stopwatchFinished = true;
+  stopwatchElement.textContent = formatStopwatch(stopwatchElapsedMs);
+}
+
+function scoreForTime(milliseconds) {
+  const seconds = milliseconds / 1000;
+
+  if (seconds < 15) {
+    return 500;
+  } else if (seconds < 35) {
+    return 400;
+  } else if (seconds < 45) {
+    return 300;
+  } else {
+    return 200;
+  }
+}
+
+function getBestScore() {
+  return Number(localStorage.getItem(BEST_SCORE_KEY)) || 0;
+}
+
+function getBestTime() {
+  const storedTime = Number(localStorage.getItem(BEST_TIME_KEY));
+  return Number.isFinite(storedTime) && storedTime > 0 ? storedTime : null;
+}
+
+function updatePersonalRecords(score, time) {
+  const bestScore = getBestScore();
+  const bestTime = getBestTime();
+
+  if (score > bestScore) {
+    localStorage.setItem(BEST_SCORE_KEY, String(score));
+  }
+
+  if (bestTime === null || time < bestTime) {
+    localStorage.setItem(BEST_TIME_KEY, String(time));
+  }
+}
+
+function formatBestTime(time) {
+  return time === null ? '--:--.--' : formatStopwatch(time);
+}
+
+function showStartScreen() {
+  startScreen.style.display = 'flex';
+}
+
+function hideStartScreen() {
+  startScreen.style.display = 'none';
+}
+
+function showLevelCompleteScreen() {
+  const score = scoreForTime(stopwatchElapsedMs);
+
+  updatePersonalRecords(score, stopwatchElapsedMs);
+
+  levelCompleteScore.textContent = `Score: ${score}`;
+  levelCompleteTime.textContent = `Time: ${formatStopwatch(stopwatchElapsedMs)}`;
+  levelCompleteRecords.textContent = `Best Score: ${getBestScore()} | Best Time: ${formatBestTime(getBestTime())}`;
+  levelCompleteScreen.style.display = 'flex';
+}
+
+function hideLevelCompleteScreen() {
+  levelCompleteScreen.style.display = 'none';
+}
+
+function resetStopwatch() {
+  stopwatchStartTime = null;
+  stopwatchElapsedMs = 0;
+  stopwatchRunning = false;
+  stopwatchFinished = false;
+  stopwatchElement.textContent = formatStopwatch(stopwatchElapsedMs);
+}
+
+function playerTouchesDoor() {
+  const playerLeft = player.sprite.x - player.sprite.w / 2;
+  const playerRight = player.sprite.x + player.sprite.w / 2;
+  const playerTop = player.sprite.y - player.sprite.h / 2;
+  const playerBottom = player.sprite.y + player.sprite.h / 2;
+  const doorLeft = level.door.x - level.door.w / 2;
+  const doorRight = level.door.x + level.door.w / 2;
+  const doorTop = level.door.y - level.door.h / 2;
+  const doorBottom = level.door.y + level.door.h / 2;
+
+  return playerRight >= doorLeft &&
+    playerLeft <= doorRight &&
+    playerBottom >= doorTop &&
+    playerTop <= doorBottom;
+}
 
 q5.update = function () {
   // Toggle collision debug with ~ (shift+backtick)
@@ -59,6 +206,21 @@ q5.update = function () {
     debugMode = !debugMode;
     allSprites.debug = debugMode;
   }
+
+  if (!gameStarted && keyboard.presses('enter')) {
+    gameStarted = true;
+    hideStartScreen();
+  }
+
+  if (gameStarted && !levelComplete && !stopwatchRunning && !stopwatchFinished && stopwatchStartPressed()) {
+    startStopwatch();
+  }
+
+  if (stopwatchRunning && !levelComplete) {
+    stopwatchElapsedMs = performance.now() - stopwatchStartTime;
+  }
+
+  stopwatchElement.textContent = formatStopwatch(stopwatchElapsedMs);
 
   background('#000000');
 
@@ -87,39 +249,28 @@ q5.update = function () {
     }
   }
 
-  if (!levelComplete) {
+  if (gameStarted && !levelComplete) {
+    level.update();
     player.update(enemies);
     if (!player.isDying) {
       for (const enemy of enemies) enemy.update();
     }
 
     // Check if player reached the door
-    const dx = player.sprite.x - level.door.x;
-    const dy = player.sprite.y - level.door.y;
-    if (!player.flyMode && Math.abs(dx) < 25 && Math.abs(dy) < 30) {
+    if (!player.flyMode && playerTouchesDoor()) {
+      stopStopwatch();
       levelComplete = true;
+      showLevelCompleteScreen();
     }
   }
 
-  // Level complete overlay
   if (levelComplete) {
-    push();
-    fill(0, 0, 0, 160);
-    rectMode(CORNER);
-    rect(camera.x - width / 2, camera.y - height / 2, width, height);
-
-    textAlign(CENTER, CENTER);
-    textSize(48);
-    fill('#f1c40f');
-    text('Level Complete!', camera.x, camera.y - 30);
-
-    textSize(18);
-    fill('#ecf0f1');
-    text('Press R to restart', camera.x, camera.y + 30);
-    pop();
-
     if (keyboard.presses('r')) {
+      gameStarted = false;
       levelComplete = false;
+      hideLevelCompleteScreen();
+      showStartScreen();
+      resetStopwatch();
       player.sprite.x = level.spawnX;
       player.sprite.y = level.spawnY;
       player.sprite.vel.x = 0;

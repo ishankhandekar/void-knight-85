@@ -1,3 +1,7 @@
+// Planned additions:
+// 1. Star pixels with score updates based on how many the player collects.
+// 2. Magic fireball wizard?
+
 export function buildLevel(canvasHeight) {
   const platformGroup = new Group();
   const slimeGroup = new Group();
@@ -45,6 +49,8 @@ export function buildLevel(canvasHeight) {
   // "right", "left", "up", or "down"
   // =========================================================
   function blockLine(x, y, block_count, direction, texture = 'platform') {
+    const lineBlocks = [];
+
     for (let i = 0; i < block_count; i++) {
       let blockX = x;
       let blockY = y;
@@ -61,8 +67,10 @@ export function buildLevel(canvasHeight) {
         texture = 'wall'; // Use wall texture for vertical blocks
       }
 
-      blocks(blockX, blockY, texture);
+      lineBlocks.push(blocks(blockX, blockY, texture));
     }
+
+    return lineBlocks;
   }
 
   // =========================================================
@@ -111,37 +119,131 @@ export function buildLevel(canvasHeight) {
   // =========================================================
 
   const START_ROW = 620;
-  const PLATFORM_ROW_GAP = BLOCK_SIZE * 2;
+  const PLAYER_SIZE = 32;
+  const BARRIER_GAP = PLAYER_SIZE * 2;
+  const spawnPlatformLength = 4;
 
-  blockLine(-560, START_ROW, 5, "right"); // spawn floor
-  blockLine(-300, START_ROW - PLATFORM_ROW_GAP, 4, "right");
-  blockLine(-380, START_ROW - PLATFORM_ROW_GAP - BLOCK_SIZE * 3, 7, "up");
-  blockLine(-260, START_ROW - PLATFORM_ROW_GAP - BLOCK_SIZE * 3, 7, "up");
-  blockLine(-20, START_ROW - PLATFORM_ROW_GAP * 2, 4, "right");
-  blockLine(260, START_ROW - PLATFORM_ROW_GAP * 3, 4, "right");
-  blockLine(480, START_ROW - PLATFORM_ROW_GAP * 4, 4, "right");
+  blockLine(-680, START_ROW, spawnPlatformLength, "right"); // spawn floor
+  blockLine(-560, START_ROW - BLOCK_SIZE, 14, "up"); // right spawn wall
+  blockLine(-560, -260, 6, "down", "wall"); // ceiling wall
+  blockLine(-360, -260, 12, "down", "wall"); // tall ceiling wall
+  blockLine(-360, 660, 9, "up", "wall"); // bottom wall below tall ceiling wall
+  blockLine(-320, 340, spawnPlatformLength, "right"); // jump pad platform
+  blockLine(-160, -260, 6, "down", "wall"); // top wall above slime platform wall
+  blockLine(-160, 660, 15, "up", "wall"); // bottom wall against slime platform
+  blockLine(40, 660, 20, "up", "wall"); // bottom wall against slime moving platform
+  blockLine(200, -260, 22, "down", "wall"); // top wall right of slime moving platform
+  spike(120, 672, 80, 16);
+  blockLine(560, -50, spawnPlatformLength, "right"); // right wall platform
+  blockLine(520, -175, 5, "right"); // door platform
+  blockLine(560, 200, spawnPlatformLength, "right"); // right wall platform
+  blockLine(560, 450, spawnPlatformLength, "right"); // right wall platform
+  blockLine(400, -140, 5, "down", "wall"); // top wall above right upper wall
+  blockLine(400, 180, 5, "down", "wall"); // upper wall above right support
+  blockLine(400, 660, 5, "up", "wall"); // support below lowest right wall platform
+  jumpPad(-260, 314, 80, 12);
 
-  spike(320, START_ROW - PLATFORM_ROW_GAP * 3 - 24);
+  const movingPlatformX = -520;
+  const movingPlatformStartY = 596;
+  const movingPlatformWidth = spawnPlatformLength * BLOCK_SIZE;
+  const movingPlatform = blockLine(movingPlatformX, movingPlatformStartY, spawnPlatformLength, "right");
+  const movingPlatformKillBlock = spike(
+    movingPlatformX + movingPlatformWidth / 2 - BLOCK_SIZE / 2,
+    movingPlatformStartY + BLOCK_SIZE / 2 + 8,
+    movingPlatformWidth,
+    16
+  );
+  const movingPlatformTopY = -300 + BLOCK_SIZE / 2 + BARRIER_GAP + BLOCK_SIZE / 2;
+  const movingPlatformBottomY = 700 - BLOCK_SIZE / 2 - BARRIER_GAP - BLOCK_SIZE / 2;
+  const movingPlatformSlug = {
+    x: movingPlatformX + movingPlatformWidth / 2 - BLOCK_SIZE / 2,
+    y: movingPlatformStartY - BLOCK_SIZE / 2 - 12,
+    left: movingPlatformX - BLOCK_SIZE / 2 + 12,
+    right: movingPlatformX + movingPlatformWidth - BLOCK_SIZE / 2 - 12
+  };
 
-  blockLine(160, START_ROW - PLATFORM_ROW_GAP * 5, 4, "right");
-  slime(220, START_ROW - PLATFORM_ROW_GAP * 5 - 24, 80, 12);
+  const secondMovingPlatformX = -120;
+  const secondMovingPlatformStartY = 60;
+  const secondMovingPlatform = blockLine(secondMovingPlatformX, secondMovingPlatformStartY, spawnPlatformLength, "right");
+  const secondMovingPlatformKillBlock = spike(
+    secondMovingPlatformX + movingPlatformWidth / 2 - BLOCK_SIZE / 2,
+    secondMovingPlatformStartY + BLOCK_SIZE / 2 + 8,
+    movingPlatformWidth,
+    16
+  );
+  const secondMovingPlatformSlug = {
+    x: secondMovingPlatformX + movingPlatformWidth / 2 - BLOCK_SIZE / 2,
+    y: secondMovingPlatformStartY - BLOCK_SIZE / 2 - 12,
+    left: secondMovingPlatformX - BLOCK_SIZE / 2 + 12,
+    right: secondMovingPlatformX + movingPlatformWidth - BLOCK_SIZE / 2 - 12
+  };
+  const secondMovingPlatformTopY = -300 + BLOCK_SIZE / 2 + BARRIER_GAP + BLOCK_SIZE / 2;
+  const secondMovingPlatformBottomY = 700 - BLOCK_SIZE / 2 - BARRIER_GAP - BLOCK_SIZE / 2;
+  let movingPlatformDirection = -1;
+  let secondMovingPlatformDirection = -1;
 
-  blockLine(-160, START_ROW - PLATFORM_ROW_GAP * 6, 4, "right");
-  jumpPad(-100, START_ROW - PLATFORM_ROW_GAP * 6 - 24, 60, 12);
-  blocks(40, START_ROW - PLATFORM_ROW_GAP * 8);
-  blocks(120, START_ROW - PLATFORM_ROW_GAP * 9);
+  for (const platform of movingPlatform) {
+    platform.physics = 'kinematic';
+    platform.vel.y = -2;
+  }
+  movingPlatformKillBlock.physics = 'kinematic';
+  movingPlatformKillBlock.vel.y = -2;
+  for (const platform of secondMovingPlatform) {
+    platform.physics = 'kinematic';
+    platform.vel.y = -2;
+  }
+  secondMovingPlatformKillBlock.physics = 'kinematic';
+  secondMovingPlatformKillBlock.vel.y = -2;
 
-  blockLine(-500, START_ROW - PLATFORM_ROW_GAP * 7, 4, "right");
-  blockLine(200, START_ROW - PLATFORM_ROW_GAP * 9, 4, "right");
+  function updateMovingPlatform() {
+    const currentY = movingPlatform[0].y;
 
-  // Door platform
-  blockLine(360, START_ROW - PLATFORM_ROW_GAP * 10, 7, "right");
+    if (currentY <= movingPlatformTopY) {
+      movingPlatformDirection = 1;
+      for (const platform of movingPlatform) {
+        platform.y = movingPlatformTopY;
+      }
+    } else if (currentY >= movingPlatformBottomY) {
+      movingPlatformDirection = -1;
+      for (const platform of movingPlatform) {
+        platform.y = movingPlatformBottomY;
+      }
+    }
+
+    const velocity = movingPlatformDirection * 2;
+    for (const platform of movingPlatform) {
+      platform.vel.y = velocity;
+    }
+    movingPlatformKillBlock.y = movingPlatform[0].y + BLOCK_SIZE / 2 + movingPlatformKillBlock.h / 2;
+    movingPlatformKillBlock.vel.y = velocity;
+
+    const secondCurrentY = secondMovingPlatform[0].y;
+
+    if (secondCurrentY <= secondMovingPlatformTopY) {
+      secondMovingPlatformDirection = 1;
+      for (const platform of secondMovingPlatform) {
+        platform.y = secondMovingPlatformTopY;
+      }
+    } else if (secondCurrentY >= secondMovingPlatformBottomY) {
+      secondMovingPlatformDirection = -1;
+      for (const platform of secondMovingPlatform) {
+        platform.y = secondMovingPlatformBottomY;
+      }
+    }
+
+    const secondVelocity = secondMovingPlatformDirection * 2;
+    for (const platform of secondMovingPlatform) {
+      platform.vel.y = secondVelocity;
+    }
+    secondMovingPlatformKillBlock.y = secondMovingPlatform[0].y + BLOCK_SIZE / 2 + secondMovingPlatformKillBlock.h / 2;
+    secondMovingPlatformKillBlock.vel.y = secondVelocity;
+  }
 
   // =========================================================
   // DOOR
   // =========================================================
 
-  const doorSprite = new Sprite(560, START_ROW - PLATFORM_ROW_GAP * 10 - 40, 36, 50);
+  const doorSprite = new Sprite(600, -220, 36, 50);
   doorSprite.physics = STATIC;
   doorSprite.color = '#f4d35e';
   doorSprite.stroke = '#b8860b';
@@ -152,7 +254,7 @@ export function buildLevel(canvasHeight) {
   // SPAWN
   // =========================================================
 
-  const spawnX = -560;
+  const spawnX = -680;
   const spawnY = 580;
 
   // =========================================================
@@ -190,6 +292,9 @@ export function buildLevel(canvasHeight) {
   return {
     platforms: platformGroup,
     door: doorSprite,
+    movingPlatformSlug,
+    secondMovingPlatformSlug,
+    update: updateMovingPlatform,
     spawnX,
     spawnY
   };

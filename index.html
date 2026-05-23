@@ -30,6 +30,65 @@
 			z-index: 100;
 		}
 
+		#stopwatch {
+			position: fixed;
+			top: 10px;
+			left: 10px;
+			padding: 4px 10px;
+			background: rgba(0, 0, 0, 0.65);
+			color: #f1c40f;
+			border: 1px solid rgba(241, 196, 15, 0.75);
+			border-radius: 3px;
+			font-family: monospace;
+			font-size: 16px;
+			line-height: 1;
+			pointer-events: none;
+			z-index: 100;
+		}
+
+		#start-screen,
+		#level-complete-screen {
+			position: fixed;
+			inset: 0;
+			align-items: center;
+			justify-content: center;
+			flex-direction: column;
+			gap: 18px;
+			background: #000000;
+			color: #ecf0f1;
+			font-family: monospace;
+			pointer-events: none;
+			z-index: 200;
+		}
+
+		#start-screen {
+			display: flex;
+		}
+
+		#level-complete-screen {
+			display: none;
+		}
+
+		#start-screen h1,
+		#level-complete-screen h1 {
+			margin: 0;
+			color: #f1c40f;
+			font-size: 48px;
+			font-weight: 700;
+		}
+
+		#start-time,
+		#level-complete-score,
+		#level-complete-records,
+		#level-complete-time {
+			font-size: 24px;
+		}
+
+		#start-prompt,
+		#level-complete-restart {
+			font-size: 18px;
+		}
+
 		#debug-hud .hud-tag {
 			padding: 2px 8px;
 			border-radius: 3px;
@@ -72,12 +131,25 @@
   -->
 	<div id="made-with-q5play" style="display:none"></div>
 	
-	<div id="debug-hud">
-		<div id="hud-fly" class="hud-tag">FLY MODE [`]</div>
-		<div id="hud-debug" class="hud-tag">DEBUG MODE [~]</div>
-	</div>
+		<div id="debug-hud">
+			<div id="hud-fly" class="hud-tag">FLY MODE [`]</div>
+			<div id="hud-debug" class="hud-tag">DEBUG MODE [~]</div>
+		</div>
+		<div id="stopwatch">00:00.00</div>
+		<div id="start-screen">
+			<h1>Ready?</h1>
+			<div id="start-time">Time: 00:00.00</div>
+			<div id="start-prompt">Press Enter to start</div>
+		</div>
+		<div id="level-complete-screen">
+			<h1>Level Complete!</h1>
+			<div id="level-complete-score">Score: 0</div>
+			<div id="level-complete-time">Time: 00:00.00</div>
+			<div id="level-complete-records">Best Score: 0 | Best Time: --:--.--</div>
+			<div id="level-complete-restart">Press R to restart</div>
+		</div>
 
-	<!-- YOUR SKETCH -->
+		<!-- YOUR SKETCH -->
 	<script type="module" src="sketch.js"></script>
 </body>
 
