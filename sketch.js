@@ -55,9 +55,8 @@ const enemies = [
 for (const enemy of enemies) {
   enemy.sprite.overlaps(player.sprite, (enemySprite, playerSprite) => {
     if (player.isDying || player.flyMode || enemySprite.deleted) return;
-    // Stomp: player falling onto top of enemy
+    // Stomp: bounce off enemy but don't kill — only a smash kills
     if (playerSprite.vel.y > 0 && playerSprite.y < enemySprite.y - 4) {
-      enemySprite.delete();
       playerSprite.vel.y = -7;
     } else {
       player.die();

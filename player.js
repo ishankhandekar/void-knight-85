@@ -14,16 +14,18 @@ export class Player {
     this.sprite.addAni('Sprites/MaskedMCdeath.png', 23, '32x32')
     this.sprite.addAni('Sprites/MCattackani.png', 8, '32x32')
     this.sprite.addAni('Sprites/MaskedMCSmashPart1.png', 6, '32x32');
+    this.sprite.addAni('Sprites/MaskedMCSmashPart2.png', 6, '32x32')
     this.sprite.anis.MaskedMCIdle.frameDelay = 10;
     this.sprite.anis.MaskedMCJump.frameDelay = 10;
     this.sprite.anis.MaskedMCWalking.frameDelay = 6;
     this.sprite.anis.MCwallclimb.frameDelay = 8;
     this.sprite.anis.MaskedMCdeath.frameDelay = 5;
     this.sprite.anis.MCattackani.frameDelay = 4;
-    this.sprite.anis.MaskedMCSmashPart1.frameDelay = 2;
+    this.sprite.anis.MaskedMCSmashPart1.frameDelay = 1;
+    this.sprite.anis.MaskedMCSmashPart2.frameDelay = 2;
     // No need to scale after this
     // if you scale sprite after this it applies on top (stacks)
-    for (const key of ['MaskedMCIdle', 'MaskedMCJump', 'MaskedMCWalking', 'MCwallclimb', 'MaskedMCdeath', 'MCattackani', 'MaskedMCSmashPart1']) {
+    for (const key of ['MaskedMCIdle', 'MaskedMCJump', 'MaskedMCWalking', 'MCwallclimb', 'MaskedMCdeath', 'MCattackani', 'MaskedMCSmashPart1', 'MaskedMCSmashPart2']) {
       this.sprite.anis[key].scale.x = 32 / 19;
       this.sprite.anis[key].scale.y = 32 / 19;
     }
@@ -67,6 +69,8 @@ export class Player {
     this.idleAnimation = true;
     this.wallClimbAnimation = false;
     this.attackAnimation = false;
+    this.smashAnimation1 = false;
+    this.smashAnimation2 = false;
 
     this.isDying = false;
 
@@ -167,11 +171,12 @@ export class Player {
         this.isGrounded = true;
       }
 
-      // Wall detected if player's side is within 5px of a platform edge while airborne
-      if (!onWall && !this.isGrounded) {
+      // Wall detected if player's side is within 9px of a platform edge
+      // Guard removed from !this.isGrounded so fast ground-to-wall transitions don't miss detection
+      if (!onWall) {
         const verticalOverlap = playerBottom > platTop + 2 && playerTop < platBottom - 2;
-        if (Math.abs(playerLeft - platRight) < 5 && verticalOverlap) onWall =  1;
-        else if (Math.abs(playerRight - platLeft) < 5 && verticalOverlap) onWall = -1;
+        if (Math.abs(playerLeft - platRight) < 9 && verticalOverlap) onWall =  1;
+        else if (Math.abs(playerRight - platLeft) < 9 && verticalOverlap) onWall = -1;
       }
     }
 
@@ -182,6 +187,11 @@ export class Player {
       this.wallJumpForceDir = 0;
       if (this.sprite.vel.y > 0) {
         this.sprite.vel.y = 0;
+      }
+      // Clear smash state so idle/walk animation can resume
+      if (this.smashAnimation2) {
+        this.smashAnimation2 = false;
+        this.jumpAnimation = false;
       }
     }
 
@@ -198,10 +208,8 @@ export class Player {
     const effectiveWall = reGrabBlocked ? 0 : onWall;
 
 
-    // Touching a new wall cancels the wall jump arc
-    if (effectiveWall && this.wallJumpForceDir !== 0) {
-      this.wallJumpForceDir = 0;
-    }
+    // Arc cancellation moved to after wall-jump logic so momentum isn't stripped
+    // before the new jump can fire (see below)
 
     // Read keyboard input (held = continuous, presses = first frame only)
     const left  = keyboard.pressing('left')  || keyboard.pressing('a');
@@ -209,7 +217,7 @@ export class Player {
     const jumpPressed = keyboard.presses('up') || keyboard.presses('w') || keyboard.presses('space');
     const jumpHeld    = keyboard.pressing('up') || keyboard.pressing('w') || keyboard.pressing('space');
     const attack = keyboard.pressing('p')
-    const smash = keyboard.pressing('s') || keyboard.pressing('down');
+    const smash = keyboard.presses('s') || keyboard.presses('down');
 
     //Slime effect from level.js
     const onSlime = this.sprite._onSlime === true;
@@ -232,12 +240,36 @@ export class Player {
     }
     const jumpBufferOk = (now - this.lastJumpPressTime) < this.jumpBufferTime;
 
-    if (smash && this.jumpAnimation) {
+    if (smash && this.jumpAnimation && !this.smashAnimation1 && !this.smashAnimation2) {
       if (this.sprite.ani.frame == this.sprite.ani.lastFrame) {
         this.sprite.changeAni('MaskedMCSmashPart1');
+        this.smashAnimation1 = true;
         this.sprite.ani.frame = 0;
         this.sprite.ani.loop = false;
         this.sprite.ani.play();
+      }
+    }
+
+    if (this.smashAnimation1 && this.sprite.ani.frame == this.sprite.ani.lastFrame && !this.smashAnimation2) {
+      this.sprite.changeAni('MaskedMCSmashPart2');
+      this.smashAnimation1 = false;
+      this.smashAnimation2 = true;
+      this.sprite.ani.frame = 0;
+      this.sprite.ani.loop = false;
+      this.sprite.ani.play();
+    }
+
+    // When Part2 reaches last frame, hold it there — state clears on landing
+    if (this.smashAnimation2 && this.sprite.ani.frame >= this.sprite.ani.lastFrame) {
+      this.sprite.ani.pause();
+      // Smash kill: destroy any enemy directly below while the last frame is active
+      for (const enemy of enemies) {
+        if (enemy.sprite.deleted) continue;
+        const dx = Math.abs(this.sprite.x - enemy.sprite.x);
+        const dy = enemy.sprite.y - this.sprite.y;
+        if (dx < 28 && dy > 0 && dy < 40) {
+          enemy.sprite.delete();
+        }
       }
     }
 
@@ -250,7 +282,12 @@ export class Player {
       if (decayedVx < this.wallJumpEndVx) {
         this.wallJumpForceDir = 0;
       } else {
-        this.sprite.vel.x = this.wallJumpForceDir * decayedVx;
+        // Only override vel.x if the arc would push faster than current speed in that direction
+        // Prevents the arc from slowing a fast-moving player mid-air
+        const arcVx = this.wallJumpForceDir * decayedVx;
+        if (this.wallJumpForceDir * this.sprite.vel.x < decayedVx) {
+          this.sprite.vel.x = arcVx;
+        }
       }
     }
 
@@ -291,7 +328,8 @@ export class Player {
       }
     }
 
-      if (this.sprite.ani.frame >= this.sprite.ani.lastFrame) {
+      if (this.attackAnimation && this.sprite.ani.name === 'MCattackani' &&
+          this.sprite.ani.frame >= this.sprite.ani.lastFrame) {
         this.attackAnimation = false;
       }
 
@@ -327,6 +365,11 @@ export class Player {
       this.lastWallJumpTime = now;
       this.lastWallDir = effectiveWall;
       this.lastJumpPressTime = 0;
+    }
+
+    // Cancel arc when touching a new wall — placed after wall-jump so the new jump fires first
+    if (effectiveWall && this.wallJumpForceDir !== 0 && effectiveWall !== this.lastWallDir) {
+      this.wallJumpForceDir = 0;
     }
 
     // Variable jump height: releasing jump early cuts upward velocity for shorter hops
@@ -367,6 +410,12 @@ export class Player {
       } else if (this.isGrounded) {
         this.sprite.changeAni('MaskedMCIdle');
         this.idleAnimation = true;
+      } else if (!this.smashAnimation1 && !this.smashAnimation2) {
+        // Walked or fell off a ledge without jumping — snap to falling pose
+        this.sprite.changeAni('MaskedMCJump');
+        this.sprite.ani.frame = this.sprite.ani.lastFrame;
+        this.sprite.ani.pause();
+        this.jumpAnimation = true;
       }
     }
 
