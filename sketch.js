@@ -1,5 +1,6 @@
 import { Player } from './player.js';
 import { Slug } from './slug.js';
+import { Mage } from './mage.js';
 import { buildLevel } from './level.js';
 
 let bgImage;
@@ -48,6 +49,9 @@ const enemies = [
     level.secondMovingPlatformSlug.right,
     level.platforms
   ),
+  new Mage(620, 418, 552, 688, level.platforms),
+  new Mage(620, 168, 552, 688, level.platforms),
+  new Mage(620, -82, 552, 688, level.platforms),
 ];
 
 // Use q5play's overlap system (same as spikes/jump pads) so physics separation
@@ -252,7 +256,10 @@ q5.update = function () {
     level.update();
     player.update(enemies);
     if (!player.isDying) {
-      for (const enemy of enemies) enemy.update();
+      for (const enemy of enemies) {
+        if (enemy instanceof Mage) enemy.update(player);
+        else enemy.update();
+      }
     }
 
     // Check if player reached the door

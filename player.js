@@ -196,7 +196,8 @@ export class Player {
         this.sprite.vel.y = 0;
       }
       // Clear smash state so idle/walk animation can resume
-      if (this.smashAnimation2) {
+      if (this.smashAnimation1 || this.smashAnimation2) {
+        this.smashAnimation1 = false;
         this.smashAnimation2 = false;
         this.jumpAnimation = false;
       }
@@ -335,8 +336,8 @@ export class Player {
       }
     }
 
-      if (this.attackAnimation && this.sprite.ani.name === 'MCattackani' &&
-          this.sprite.ani.frame >= this.sprite.ani.lastFrame) {
+      if (this.attackAnimation && (this.sprite.ani.name !== 'MCattackani' ||
+          this.sprite.ani.frame >= this.sprite.ani.lastFrame)) {
         this.attackAnimation = false;
       }
 
