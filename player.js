@@ -59,7 +59,7 @@ export class Player {
     this.wallJumpForceDir = 0;    // +1 or -1, 0 when arc is inactive
 
     // Prevent instantly re-grabbing the same wall
-    this.reGrabCooldown = 60;
+    this.reGrabCooldown = 30;
     this.lastWallJumpTime = 0;
     this.lastWallDir = 0;
 
@@ -154,6 +154,7 @@ export class Player {
 
     // Check if player is on ground or touching a wall by comparing edges to every platform
     this.isGrounded = false;
+    let groundPlatVelY = 0;
     let onWall = 0; // 0 = none, +1 = wall on left, -1 = wall on right
 
     for (const plat of this.groundGroup) {
@@ -165,10 +166,13 @@ export class Player {
       const horizontalOverlap = playerRight > platLeft + 1 && playerLeft < platRight - 1;
 
       // Grounded if bottom is near platform top and not jumping upward
+      // For moving platforms, widen the detection window by the platform's speed
+      const platSpeed = Math.abs(plat.vel.y || 0);
       if (!this.isGrounded && horizontalOverlap &&
-          playerBottom >= platTop - 6 && playerBottom <= platTop + 8 &&
-          this.sprite.vel.y >= -1) {
+          playerBottom >= platTop - 6 - platSpeed && playerBottom <= platTop + 8 + platSpeed &&
+          this.sprite.vel.y >= -1 - platSpeed) {
         this.isGrounded = true;
+        groundPlatVelY = plat.vel.y || 0;
       }
 
       // Wall detected if player's side is within 9px of a platform edge
@@ -185,7 +189,10 @@ export class Player {
       this.lastGroundedTime = now;
       this.lastWallJumpTime = 0;
       this.wallJumpForceDir = 0;
-      if (this.sprite.vel.y > 0) {
+      // Ride with moving platforms — match their vertical velocity instead of zeroing out
+      if (groundPlatVelY !== 0) {
+        this.sprite.vel.y = groundPlatVelY;
+      } else if (this.sprite.vel.y > 0) {
         this.sprite.vel.y = 0;
       }
       // Clear smash state so idle/walk animation can resume
@@ -352,18 +359,16 @@ export class Player {
 
     const recentJumpPad = (now - (this._lastJumpPadTime || 0)) < 300;
 
-    if (!recentJumpPad && (this.isGrounded || edgeJumpAllowed) && jumpBufferOk) {
-      //this.sprite.vel.y = -this.jumpPower;
-      this.sprite.vel.y = - currentJumpPower;
-      this.lastGroundedTime = 0;
-      this.lastJumpPressTime = 0;
-    } else if (effectiveWall && !this.isGrounded && jumpBufferOk) {
-      //this.sprite.vel.y = -this.wallJumpPower;
+    if (effectiveWall && !this.isGrounded && jumpBufferOk) {
       this.sprite.vel.y = - currentWallJumpPower;
       this.sprite.vel.x = effectiveWall * this.wallJumpPeakVx;
       this.wallJumpForceDir = effectiveWall;
       this.lastWallJumpTime = now;
       this.lastWallDir = effectiveWall;
+      this.lastJumpPressTime = 0;
+    } else if (!recentJumpPad && (this.isGrounded || edgeJumpAllowed) && jumpBufferOk) {
+      this.sprite.vel.y = - currentJumpPower;
+      this.lastGroundedTime = 0;
       this.lastJumpPressTime = 0;
     }
 
@@ -395,7 +400,7 @@ export class Player {
 
     // Hold jump animation on last frame while airborne, return to idle/walk on landing
     if (this.jumpAnimation && !this.wallClimbAnimation) {
-      if (this.isGrounded && this.sprite.vel.y >= 0) {
+      if (this.isGrounded) {
         this.jumpAnimation = false;
       } else if (this.sprite.ani.frame >= this.sprite.ani.lastFrame) {
         this.sprite.ani.pause();
