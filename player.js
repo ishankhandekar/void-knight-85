@@ -80,6 +80,37 @@ export class Player {
     this.sprite._player = this;
   }
 
+  /** Full reset to exact spawn position — safe to call at any time. */
+  reset() {
+    this.isDying = false;
+    this.flyMode = false;
+    this.sprite.physics = 'dynamic';
+    this.sprite.x = this.spawnX;
+    this.sprite.y = this.spawnY;
+    this.sprite.vel.x = 0;
+    this.sprite.vel.y = 0;
+
+    // Animation state
+    this.jumpAnimation      = false;
+    this.walkAnimation      = false;
+    this.idleAnimation      = true;
+    this.wallClimbAnimation = false;
+    this.attackAnimation    = false;
+    this.smashAnimation1    = false;
+    this.smashAnimation2    = false;
+
+    // Movement state
+    this.wallJumpForceDir   = 0;
+    this.lastWallJumpTime   = 0;
+    this.lastWallDir        = 0;
+    this.lastGroundedTime   = 0;
+    this.lastJumpPressTime  = 0;
+    this._lastJumpPadTime   = 0;
+    this.isGrounded         = false;
+
+    this.sprite.changeAni('MaskedMCIdle');
+  }
+
   die() {
     if (this.isDying) return;
     this.isDying = true;

@@ -1,13 +1,5 @@
 export class Enemy {
   constructor(x, y, patrolLeft, patrolRight, groundGroup) {
-    this.sprite = new Sprite(x, y, 24, 24);
-    this.sprite.rotationLock = true;
-    this.sprite.friction = 0;
-    this.sprite.bounciness = 0;
-    this.sprite.color = '#8e44ad';
-    this.sprite.stroke = '#6c3483';
-    this.sprite.strokeWeight = 2;
-
     this.groundGroup = groundGroup;
     this.patrolLeft = patrolLeft;
     this.patrolRight = patrolRight;
@@ -16,6 +8,30 @@ export class Enemy {
 
     this.spawnX = x;
     this.spawnY = y;
+
+    this._buildSprite(x, y);
+  }
+
+  /** Create (or recreate) the physics sprite at the given position. */
+  _buildSprite(x, y) {
+    if (this.sprite && !this.sprite.deleted) this.sprite.delete();
+    this.sprite = new Sprite(x, y, 24, 24);
+    this.sprite.rotationLock = true;
+    this.sprite.friction = 0;
+    this.sprite.bounciness = 0;
+    this.sprite.color = '#8e44ad';
+    this.sprite.stroke = '#6c3483';
+    this.sprite.strokeWeight = 2;
+  }
+
+  /**
+   * Reset back to the spawn position.
+   * Recreates the sprite so previously-killed enemies are restored.
+   * Subclasses should call super.reset() then re-add their animations.
+   */
+  reset() {
+    this._buildSprite(this.spawnX, this.spawnY);
+    this.dir = 1;
   }
 
   update() {

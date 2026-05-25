@@ -56,18 +56,21 @@ const enemies = [
 
 // Use q5play's overlap system (same as spikes/jump pads) so physics separation
 // doesn't prevent detection. overlaps() fires without resolving collision physics.
-for (const enemy of enemies) {
-  enemy.sprite.overlaps(player.sprite, (enemySprite, playerSprite) => {
-    if (player.isDying || player.flyMode || enemySprite.deleted) return;
-    // Stomp: bounce off enemy but don't kill — only a smash kills
-    if (playerSprite.vel.y > 0 && playerSprite.y < enemySprite.y - 4) {
-      playerSprite.vel.y = -7;
-    } else {
-      player.die();
-      stopEnemies(enemies);
-    }
-  });
+function setupEnemyOverlaps() {
+  for (const enemy of enemies) {
+    enemy.sprite.overlaps(player.sprite, (enemySprite, playerSprite) => {
+      if (player.isDying || player.flyMode || enemySprite.deleted) return;
+      // Stomp: bounce off enemy but don't kill — only a smash kills
+      if (playerSprite.vel.y > 0 && playerSprite.y < enemySprite.y - 4) {
+        playerSprite.vel.y = -7;
+      } else {
+        player.die();
+        stopEnemies(enemies);
+      }
+    });
+  }
 }
+setupEnemyOverlaps();
 
 const PARALLAX_X = 0.05;
 const PARALLAX_Y = 0.03;
@@ -187,6 +190,28 @@ function resetStopwatch() {
   stopwatchElement.textContent = formatStopwatch(stopwatchElapsedMs);
 }
 
+function resetLevel() {
+  // Reset player to exact spawn position and clear all movement/animation state
+  player.reset();
+
+  // Reset camera to spawn immediately (no lerp lag)
+  camera.x = level.spawnX + 10;
+  camera.y = level.spawnY + 10;
+
+  // Reset all enemies — restores killed ones and repositions live ones
+  for (const enemy of enemies) {
+    enemy.reset();
+  }
+  // Re-register overlap callbacks because enemy sprites were recreated
+  setupEnemyOverlaps();
+
+  // Reset moving platforms to their exact start positions
+  level.reset();
+
+  // Reset stopwatch
+  resetStopwatch();
+}
+
 function playerTouchesDoor() {
   const playerLeft = player.sprite.x - player.sprite.w / 2;
   const playerRight = player.sprite.x + player.sprite.w / 2;
@@ -270,18 +295,16 @@ q5.update = function () {
     }
   }
 
-  if (levelComplete) {
-    if (keyboard.presses('r')) {
-      gameStarted = false;
+  // Press R at any time to reset the level to the exact starting position
+  if (gameStarted && keyboard.presses('r')) {
+    if (levelComplete) {
+      // From end screen: go back to start screen
       levelComplete = false;
+      gameStarted = false;
       hideLevelCompleteScreen();
       showStartScreen();
-      resetStopwatch();
-      player.sprite.x = level.spawnX;
-      player.sprite.y = level.spawnY;
-      player.sprite.vel.x = 0;
-      player.sprite.vel.y = 0;
     }
+    resetLevel();
   }
 
   // Sync debug HUD tags in the HTML overlay

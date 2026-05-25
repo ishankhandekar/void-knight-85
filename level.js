@@ -289,12 +289,33 @@ export function buildLevel(canvasHeight) {
     sprite._player.die();
   });
 
+  function resetMovingPlatforms() {
+    // First moving platform
+    movingPlatformDirection = -1;
+    for (const platform of movingPlatform) {
+      platform.y = movingPlatformStartY;
+      platform.vel.y = -2;
+    }
+    movingPlatformKillBlock.y = movingPlatformStartY + BLOCK_SIZE / 2 + movingPlatformKillBlock.h / 2;
+    movingPlatformKillBlock.vel.y = -2;
+
+    // Second moving platform
+    secondMovingPlatformDirection = -1;
+    for (const platform of secondMovingPlatform) {
+      platform.y = secondMovingPlatformStartY;
+      platform.vel.y = -2;
+    }
+    secondMovingPlatformKillBlock.y = secondMovingPlatformStartY + BLOCK_SIZE / 2 + secondMovingPlatformKillBlock.h / 2;
+    secondMovingPlatformKillBlock.vel.y = -2;
+  }
+
   return {
     platforms: platformGroup,
     door: doorSprite,
     movingPlatformSlug,
     secondMovingPlatformSlug,
     update: updateMovingPlatform,
+    reset: resetMovingPlatforms,
     spawnX,
     spawnY
   };
