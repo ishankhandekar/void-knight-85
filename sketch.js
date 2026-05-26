@@ -93,13 +93,8 @@ function setupEnemyOverlaps() {
   for (const enemy of enemies) {
     enemy.sprite.overlaps(player.sprite, (enemySprite, playerSprite) => {
       if (player.isDying || player.flyMode || enemySprite.deleted) return;
-      // Stomp: bounce off enemy but don't kill — only a smash kills
-      if (playerSprite.vel.y > 0 && playerSprite.y < enemySprite.y - 4) {
-        playerSprite.vel.y = -7;
-      } else {
-        player.die();
-        freezeEnemies(enemies);
-      }
+      player.die();
+      freezeEnemies(enemies);
     });
   }
 }
@@ -312,7 +307,10 @@ q5.update = function () {
 
   if (gameStarted && !levelComplete) {
     player.update(enemies);
-    if (!player.isDying) {
+    if (player._respawnReady) {
+      player._respawnReady = false;
+      resetLevel();
+    } else if (!player.isDying) {
       level.update();
       if (player._enemiesFrozen) {
         unfreezeEnemies(enemies);
@@ -327,6 +325,8 @@ q5.update = function () {
       level.freeze();
       player._enemiesFrozen = true;
     }
+
+    level.updateSpikes();
 
     // Check if player reached the door
     if (!player.flyMode && playerTouchesDoor()) {

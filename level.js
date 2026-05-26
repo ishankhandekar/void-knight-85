@@ -4,7 +4,7 @@
 
 export function buildLevel(canvasHeight) {
   const platformGroup = new Group();
-  const slimeGroup = new Group();
+  const honeyGroup = new Group();
   const jumpPadGroup = new Group();
   const spikeGroup = new Group();
 
@@ -82,11 +82,17 @@ export function buildLevel(canvasHeight) {
     s.color = '#e85d4f';
     s.stroke = '#9f3029';
     s.strokeWeight = 2;
+    s.addAni("Sprites/explosionani.png", 6, "32x32");
+    s.anis.explosionani.frameDelay = 2;
+    s.anis.explosionani.scale.x = w / 16;
+    s.anis.explosionani.scale.y = h / 4;
+    s.anis.explosionani.loop = false;
+    s.anis.explosionani.pause();
     return s;
   }
 
-  function slime(x, y, w = 80, h = 12) {
-    const sl = new slimeGroup.Sprite(x, y, w, h);
+  function honey(x, y, w = 80, h = 12) {
+    const sl = new honeyGroup.Sprite(x, y, w, h);
     sl.physics = STATIC;
     sl.color = '#f6b93b'; 
     sl.stroke = '#bd7600'; 
@@ -100,6 +106,12 @@ export function buildLevel(canvasHeight) {
     jp.color = '#39e58c'; 
     jp.stroke = '#17824e'; 
     jp.strokeWeight = 2;
+    jp.addAni("Sprites/slimetextureani.png", 6, "32x32");
+    jp.anis.slimetextureani.frameDelay = 2;
+    jp.anis.slimetextureani.scale.x = w / 32;
+    jp.anis.slimetextureani.scale.y = h / 32;
+    jp.anis.slimetextureani.loop = false;
+    jp.anis.slimetextureani.pause();
     return jp;
   }
 
@@ -141,16 +153,16 @@ export function buildLevel(canvasHeight) {
   
 
 //Ending Block Section
-  blocks(320, 600);
-  blocks(440, 480);
-  blocks(560, 560);
-  blocks(320, 320);
-  blocks(480, 280);
-  blocks(600, 360);
-  blocks(360, 80);
-  blocks(520, 120);
-  blocks(400, -80);
-  blocks(600, -40);
+  blocks(320, 580);
+  blocks(440, 460);
+  blocks(560, 540);
+  blocks(320, 300);
+  blocks(480, 260);
+  blocks(600, 340);
+  blocks(360, 60);
+  blocks(520, 100);
+  blocks(400, -100);
+  blocks(600, -60);
 
   jumpPad(-260, 314, 80, 12);
 
@@ -189,6 +201,21 @@ export function buildLevel(canvasHeight) {
     platform.physics = 'kinematic';
     platform.vel.y = -2;
   }
+
+  function updateHazardAnimations() {
+    for (const s of spikeGroup) {
+      if (s.anis.explosionani.frame >= s.anis.explosionani.lastFrame) {
+        s.anis.explosionani.pause();
+      }
+    }
+    for (const jp of jumpPadGroup) {
+      if (jp.anis.slimetextureani.frame >= jp.anis.slimetextureani.lastFrame) {
+        jp.anis.slimetextureani.frame = 0;
+        jp.anis.slimetextureani.pause();
+      }
+    }
+  }
+
   function updateMovingPlatform() {
     const currentY = movingPlatform[0].y;
 
@@ -226,18 +253,27 @@ export function buildLevel(canvasHeight) {
     for (const platform of secondMovingPlatform) {
       platform.vel.y = secondVelocity;
     }
+
+    updateHazardAnimations();
   }
 
   // =========================================================
   // DOOR
   // =========================================================
 
-  const doorSprite = new Sprite(600, -220, 36, 50);
+  const doorSprite = new Sprite(600, -230, 80, 140);
   doorSprite.physics = STATIC;
   doorSprite.color = '#f4d35e';
   doorSprite.stroke = '#b8860b';
   doorSprite.strokeWeight = 3;
   doorSprite.bounciness = 0;
+  // 28, 16
+  doorSprite.addAni("Sprites/portaltexture.png", 9, "32x32");
+  doorSprite.anis.portaltexture.frameDelay = 12;
+  doorSprite.anis.portaltexture.scale.x = 32 / 16;
+  doorSprite.anis.portaltexture.scale.y = 56 / 28;
+  doorSprite.changeAni("portaltexture");
+  doorSprite.ani.play();
   
   // =========================================================
   // SPAWN
@@ -250,15 +286,15 @@ export function buildLevel(canvasHeight) {
   // INTERACTIONS
   // =========================================================
 
-  slimeGroup.colliding(allSprites, (slime, sprite) => {
+  honeyGroup.colliding(allSprites, (honey, sprite) => {
     if (!isPlayerTarget(sprite)) return;
 
-    sprite._onSlime = true;
+    sprite._onHoney = true;
 
     // Slows horizontal movement.
     sprite.vel.x *= 0.65;
 
-    // Reduces jump height while on slime.
+    // Reduces jump height while on honey.
     if (sprite.vel.y < -3.5) {
       sprite.vel.y = -3.5;
     }
@@ -270,13 +306,26 @@ export function buildLevel(canvasHeight) {
     if (sprite.vel.y >= -2) {
       sprite.vel.y = -15;
       sprite._jumpPadBounce = true;
+      pad.anis.slimetextureani.frame = 0;
+      pad.anis.slimetextureani.loop = false;
+      pad.anis.slimetextureani.play();
     }
   });
 
   spikeGroup.overlaps(allSprites, (spike, sprite) => {
-    if (!sprite._player || sprite._player.flyMode) return;
-    sprite._player.die();
+    if (!sprite._player || sprite._player.flyMode || sprite._player.isDying) return;
+    spike.anis.explosionani.frame = 0;
+    spike.anis.explosionani.loop = false;
+    spike.anis.explosionani.play();
+    sprite._player.dieInstant();
   });
+
+  function resetSpikes() {
+    for (const s of spikeGroup) {
+      s.anis.explosionani.frame = 0;
+      s.anis.explosionani.pause();
+    }
+  }
 
   function resetMovingPlatforms() {
     // First moving platform
@@ -291,6 +340,8 @@ export function buildLevel(canvasHeight) {
       platform.y = secondMovingPlatformStartY;
       platform.vel.y = -2;
     }
+
+    resetSpikes();
   }
 
   function freezeMovingPlatforms() {
@@ -308,6 +359,7 @@ export function buildLevel(canvasHeight) {
     movingPlatformSlug,
     secondMovingPlatformSlug,
     update: updateMovingPlatform,
+    updateSpikes: updateHazardAnimations,
     freeze: freezeMovingPlatforms,
     reset: resetMovingPlatforms,
     spawnX,

@@ -125,6 +125,22 @@ export class Player {
     this.sprite.ani.pause();
   }
 
+  /** Instant death — skips the fall phase and immediately plays the death animation in place. */
+  dieInstant() {
+    if (this.isDying) return;
+    this.isDying = true;
+    this._deathFalling = false;
+
+    this.sprite.vel.x = 0;
+    this.sprite.vel.y = 0;
+    this.sprite.physics = STATIC;
+
+    this.sprite.changeAni('MaskedMCdeath');
+    this.sprite.ani.frame = 0;
+    this.sprite.ani.loop = false;
+    this.sprite.ani.play();
+  }
+
   _isOnGround() {
     const halfW = this.sprite.w / 2;
     const halfH = this.sprite.h / 2;
@@ -186,17 +202,7 @@ export class Player {
           this.sprite.ani.play();
         }
       } else if (this.sprite.ani.frame >= this.sprite.ani.lastFrame) {
-        this.isDying = false;
-        this._deathFalling = false;
-        this.sprite.physics = DYNAMIC;
-        this.sprite.x = this.spawnX;
-        this.sprite.y = this.spawnY;
-        this.sprite.vel.x = 0;
-        this.sprite.vel.y = 0;
-        this.jumpAnimation = false;
-        this.wallClimbAnimation = false;
-        this.idleAnimation = true;
-        this.sprite.changeAni('MaskedMCIdle');
+        this._respawnReady = true;
       }
       return;
     }
@@ -286,15 +292,14 @@ export class Player {
     const attack = keyboard.pressing('p')
     const smash = keyboard.presses('s') || keyboard.presses('down');
 
-    //Slime effect from level.js
-    const onSlime = this.sprite._onSlime === true;
-    this.sprite._onSlime = false;
+    const onHoney = this.sprite._onHoney === true;
+    this.sprite._onHoney = false;
 
-    const currentSpeed = onSlime ?
+    const currentSpeed = onHoney ?
     this.speed * 0.45 : this.speed;
-    const currentJumpPower = onSlime ?
+    const currentJumpPower = onHoney ?
     this.jumpPower * 0.55 : this.jumpPower;
-    const currentWallJumpPower = onSlime ?
+    const currentWallJumpPower = onHoney ?
     this.wallJumpPower * 0.55 : this.wallJumpPower;
 
     // Jump buffer: remember jump press for 120ms so pressing slightly before landing still works
