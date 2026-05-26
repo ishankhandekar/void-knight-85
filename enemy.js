@@ -15,7 +15,7 @@ export class Enemy {
   /** Create (or recreate) the physics sprite at the given position. */
   _buildSprite(x, y) {
     if (this.sprite && !this.sprite.deleted) this.sprite.delete();
-    this.sprite = new Sprite(x, y, 24, 24);
+    this.sprite = new Sprite(x, y, 24, 24, 'd');
     this.sprite.rotationLock = true;
     this.sprite.friction = 0;
     this.sprite.bounciness = 0;
@@ -37,11 +37,19 @@ export class Enemy {
   update() {
     if (this.sprite.deleted) return;
 
-    // Reverse at patrol bounds
-    if (this.sprite.x >= this.patrolRight) {
+    // Clamp to patrol bounds so overshooting is impossible
+    if (this.sprite.x > this.patrolRight) {
+      this.sprite.x = this.patrolRight;
       this.dir = -1;
       this.sprite.scale.x = -1;
-    } else if (this.sprite.x <= this.patrolLeft) {
+    } else if (this.sprite.x < this.patrolLeft) {
+      this.sprite.x = this.patrolLeft;
+      this.dir = 1;
+      this.sprite.scale.x = 1;
+    } else if (this.sprite.x >= this.patrolRight - 2) {
+      this.dir = -1;
+      this.sprite.scale.x = -1;
+    } else if (this.sprite.x <= this.patrolLeft + 2) {
       this.dir = 1;
       this.sprite.scale.x = 1;
     }
@@ -50,7 +58,8 @@ export class Enemy {
     const halfW = this.sprite.w / 2;
     const halfH = this.sprite.h / 2;
     const enemyBottom = this.sprite.y + halfH;
-    const lookAheadX = this.sprite.x + this.dir * (halfW + 4);
+    const GROUND_THRESHOLD = 10;
+    const lookAheadX = this.sprite.x + this.dir * (halfW + 8);
 
     let isGrounded = false;
     let groundAhead = false;
@@ -60,11 +69,11 @@ export class Enemy {
       const platTop   = plat.y - plat.h / 2;
       const horizontalOverlap = this.sprite.x + halfW > platLeft && this.sprite.x - halfW < platRight;
 
-      if (!isGrounded && horizontalOverlap && Math.abs(enemyBottom - platTop) < 8) {
+      if (!isGrounded && horizontalOverlap && Math.abs(enemyBottom - platTop) < GROUND_THRESHOLD) {
         isGrounded = true;
       }
       if (lookAheadX >= platLeft && lookAheadX <= platRight &&
-          Math.abs(enemyBottom - platTop) < 10) {
+          Math.abs(enemyBottom - platTop) < GROUND_THRESHOLD) {
         groundAhead = true;
       }
     }

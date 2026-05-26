@@ -83,6 +83,7 @@ export class Player {
   /** Full reset to exact spawn position — safe to call at any time. */
   reset() {
     this.isDying = false;
+    this._deathFalling = false;
     this.flyMode = false;
     this.sprite.physics = 'dynamic';
     this.sprite.x = this.spawnX;
@@ -114,17 +115,30 @@ export class Player {
   die() {
     if (this.isDying) return;
     this.isDying = true;
+    this._deathFalling = true;
 
-    // Freeze physics
     this.sprite.vel.x = 0;
-    this.sprite.vel.y = 0;
-    this.sprite.physics = STATIC;
+    this.sprite.physics = DYNAMIC;
 
-    // Play death animation from frame 0, do not loop
-    this.sprite.changeAni('MaskedMCdeath');
-    this.sprite.ani.frame = 0;
-    this.sprite.ani.loop = false;
-    this.sprite.ani.play();
+    this.sprite.changeAni('MaskedMCJump');
+    this.sprite.ani.frame = this.sprite.ani.lastFrame;
+    this.sprite.ani.pause();
+  }
+
+  _isOnGround() {
+    const halfW = this.sprite.w / 2;
+    const halfH = this.sprite.h / 2;
+    const bottom = this.sprite.y + halfH;
+    for (const plat of this.groundGroup) {
+      const pL = plat.x - plat.w / 2;
+      const pR = plat.x + plat.w / 2;
+      const pT = plat.y - plat.h / 2;
+      if (this.sprite.x + halfW > pL && this.sprite.x - halfW < pR &&
+          bottom >= pT - 6 && bottom <= pT + 8 && this.sprite.vel.y >= -1) {
+        return true;
+      }
+    }
+    return false;
   }
 
   update(enemies) {
@@ -156,10 +170,24 @@ export class Player {
       return;
     }
 
-    // While dying: wait for the animation to finish, then respawn
     if (this.isDying) {
-      if (this.sprite.ani.frame >= this.sprite.ani.lastFrame) {
+      if (this._deathFalling) {
+        this.sprite.vel.x = 0;
+        this.sprite.vel.y = Math.min(this.sprite.vel.y, 13);
+        this._followCamera(this.sprite.x + 10, this.sprite.y + 10, this.cameraSpeed);
+        if (this._isOnGround() || this.sprite.y > this.spawnY + 600) {
+          this._deathFalling = false;
+          this.sprite.vel.x = 0;
+          this.sprite.vel.y = 0;
+          this.sprite.physics = STATIC;
+          this.sprite.changeAni('MaskedMCdeath');
+          this.sprite.ani.frame = 0;
+          this.sprite.ani.loop = false;
+          this.sprite.ani.play();
+        }
+      } else if (this.sprite.ani.frame >= this.sprite.ani.lastFrame) {
         this.isDying = false;
+        this._deathFalling = false;
         this.sprite.physics = DYNAMIC;
         this.sprite.x = this.spawnX;
         this.sprite.y = this.spawnY;

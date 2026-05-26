@@ -4,10 +4,11 @@ export class Mage extends Enemy {
     constructor(x, y, patrolLeft, patrolRight, groundGroup) {
         super(x, y, patrolLeft, patrolRight, groundGroup);
 
+        const now = Date.now();
         this.detectionRange = 250;
         this.fireballSpeed = 4;
-        this.cooldown = 0;
-        this.cooldownTimer = 0;
+        this.cooldown = 100;
+        this.lastFireTime = now;
         this.charging = false;
         this.fireballs = [];
         this.targetX = 0;
@@ -89,7 +90,7 @@ export class Mage extends Enemy {
     }
 
     _applyMageAni() {
-        this.sprite.addAni('Sprites/magechargeattackani.png', 6, '32x32');
+        this.sprite.addAni('Sprites/magechargeattackani.png', 5, '32x32');
         this.sprite.anis.magechargeattackani.frameDelay = 8;
         this.sprite.anis.magechargeattackani.scale.x = 24 / 30;
         this.sprite.anis.magechargeattackani.scale.y = 24 / 30;
@@ -110,7 +111,6 @@ export class Mage extends Enemy {
         }
         this._fireballPool = [];
         this.charging = false;
-        this.cooldownTimer = 0;
         this.targetX = 0;
         this.targetY = 0;
 
@@ -152,9 +152,9 @@ export class Mage extends Enemy {
     }
 
     update(player) {
-        if (this.sprite.deleted) return;
+        const now = Date.now();
 
-        if (this.cooldownTimer > 0) this.cooldownTimer--;
+        if (this.sprite.deleted) return;
 
         // Update existing fireballs — remove if too far or hit a platform
         for (let i = this.fireballs.length - 1; i >= 0; i--) {
@@ -192,9 +192,9 @@ export class Mage extends Enemy {
         if (this.charging) {
             this.sprite.vel.x = 0;
 
-            if (this.sprite.ani.frame >= this.sprite.ani.lastFrame) {
+            if (this.sprite.ani.frame >= this.sprite.ani.lastFrame && this.lastFireTime <= now - this.cooldown) {
                 this.charging = false;
-                this.cooldownTimer = this.cooldown;
+                this.lastFireTime = now;
                 this.sprite.ani.frame = 0;
                 this.sprite.ani.pause();
 
@@ -237,7 +237,7 @@ export class Mage extends Enemy {
         }
 
         // Start charge if player is visible, not in fly mode, and cooldown is ready
-        if (playerSprite && !player.flyMode && this.cooldownTimer <= 0 && this.canSeePlayer(playerSprite)) {
+        if (playerSprite && !player.flyMode && now - this.lastFireTime >= this.cooldown && this.canSeePlayer(playerSprite)) {
             this.charging = true;
             this.targetX = playerSprite.x;
             this.targetY = playerSprite.y;

@@ -51,8 +51,20 @@ function unfreezeEnemies(enemies) {
   for (const enemy of enemies) {
     if (enemy.sprite.deleted) continue;
     if (enemy.sprite._wasDynamic) {
+      enemy.sprite.vel.x = 0;
+      enemy.sprite.vel.y = 0;
       enemy.sprite.physics = 'dynamic';
       delete enemy.sprite._wasDynamic;
+    }
+    if (enemy instanceof Mage) {
+      enemy.charging = false;
+      for (let i = enemy.fireballs.length - 1; i >= 0; i--) {
+        const fb = enemy.fireballs[i];
+        if (!fb.deleted && !fb._inPool) {
+          enemy._returnFireball(fb);
+          enemy.fireballs.splice(i, 1);
+        }
+      }
     }
   }
 }
@@ -312,7 +324,7 @@ q5.update = function () {
         if (enemy instanceof Mage) enemy.update(player);
         else enemy.update();
       }
-    } else {
+    } else if (!player._deathFalling) {
       freezeEnemies(enemies);
       level.freeze();
       player._enemiesFrozen = true;
