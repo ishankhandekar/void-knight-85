@@ -7,7 +7,7 @@ export class Mage extends Enemy {
         const now = Date.now();
         this.detectionRange = 250;
         this.fireballSpeed = 4;
-        this.cooldown = 100;
+        this.cooldown = 500;
         this.lastFireTime = now;
         this.charging = false;
         this.fireballs = [];
