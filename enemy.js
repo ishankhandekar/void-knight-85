@@ -37,6 +37,12 @@ export class Enemy {
   update() {
     if (this.sprite.deleted) return;
 
+    // Stationary enemy — no patrol movement
+    if (this.patrolLeft >= this.patrolRight) {
+      this.sprite.vel.x = 0;
+      return;
+    }
+
     // Clamp to patrol bounds so overshooting is impossible
     if (this.sprite.x > this.patrolRight) {
       this.sprite.x = this.patrolRight;

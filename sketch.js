@@ -84,7 +84,10 @@ const enemies = [
     level.secondMovingPlatformSlug.right,
     level.platforms
   ),
-
+  new Mage(240, 468, 240, 240, level.platforms),
+  new Mage(680, 308, 680, 680, level.platforms),
+  new Mage(240, 108, 240, 240, level.platforms),
+  new Mage(680, -92, 680, 680, level.platforms),
 ];
 
 // Use q5play's overlap system (same as spikes/jump pads) so physics separation
@@ -320,7 +323,7 @@ q5.update = function () {
         if (enemy instanceof Mage) enemy.update(player);
         else enemy.update();
       }
-    } else if (!player._deathFalling) {
+    } else if (!player._enemiesFrozen) {
       freezeEnemies(enemies);
       level.freeze();
       player._enemiesFrozen = true;

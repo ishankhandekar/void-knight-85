@@ -164,6 +164,12 @@ export function buildLevel(canvasHeight) {
   blocks(400, -100);
   blocks(600, -60);
 
+  // Wall-mounted mage perches
+  blocks(240, 500);
+  blocks(680, 340);
+  blocks(240, 140);
+  blocks(680, -60);
+
   jumpPad(-260, 314, 80, 12);
 
   const movingPlatformX = -520;
