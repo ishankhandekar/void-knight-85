@@ -84,9 +84,7 @@ const enemies = [
     level.secondMovingPlatformSlug.right,
     level.platforms
   ),
-  new Mage(620, 418, 552, 688, level.platforms),
-  new Mage(620, 168, 552, 688, level.platforms),
-  new Mage(620, -82, 552, 688, level.platforms),
+
 ];
 
 // Use q5play's overlap system (same as spikes/jump pads) so physics separation

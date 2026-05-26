@@ -134,25 +134,30 @@ export function buildLevel(canvasHeight) {
   blockLine(40, 660, 20, "up", "wall"); // bottom wall against slime moving platform
   blockLine(200, -260, 22, "down", "wall"); // top wall right of slime moving platform
   spike(120, 672, 80, 16);
-  blockLine(560, -50, spawnPlatformLength, "right"); // right wall platform
   blockLine(520, -175, 5, "right"); // door platform
-  blockLine(560, 200, spawnPlatformLength, "right"); // right wall platform
-  blockLine(560, 450, spawnPlatformLength, "right"); // right wall platform
-  blockLine(400, -140, 5, "down", "wall"); // top wall above right upper wall
-  blockLine(400, 180, 5, "down", "wall"); // upper wall above right support
-  blockLine(400, 660, 5, "up", "wall"); // support below lowest right wall platform
+  ///blockLine(400, -140, 5, "down", "wall"); // top wall above right upper wall
+  ///blockLine(400, 180, 5, "down", "wall"); // upper wall above right support
+  ///blockLine(400, 660, 5, "up", "wall"); // support below lowest right wall platform
+  
+
+//Ending Block Section
+  blocks(320, 600);
+  blocks(440, 480);
+  blocks(560, 560);
+  blocks(320, 320);
+  blocks(480, 280);
+  blocks(600, 360);
+  blocks(360, 80);
+  blocks(520, 120);
+  blocks(400, -80);
+  blocks(600, -40);
+
   jumpPad(-260, 314, 80, 12);
 
   const movingPlatformX = -520;
   const movingPlatformStartY = 596;
   const movingPlatformWidth = spawnPlatformLength * BLOCK_SIZE;
   const movingPlatform = blockLine(movingPlatformX, movingPlatformStartY, spawnPlatformLength, "right");
-  const movingPlatformKillBlock = spike(
-    movingPlatformX + movingPlatformWidth / 2 - BLOCK_SIZE / 2,
-    movingPlatformStartY + BLOCK_SIZE / 2 + 8,
-    movingPlatformWidth,
-    16
-  );
   const movingPlatformTopY = -300 + BLOCK_SIZE / 2 + BARRIER_GAP + BLOCK_SIZE / 2;
   const movingPlatformBottomY = 700 - BLOCK_SIZE / 2 - BARRIER_GAP - BLOCK_SIZE / 2;
   const movingPlatformSlug = {
@@ -165,12 +170,6 @@ export function buildLevel(canvasHeight) {
   const secondMovingPlatformX = -120;
   const secondMovingPlatformStartY = 60;
   const secondMovingPlatform = blockLine(secondMovingPlatformX, secondMovingPlatformStartY, spawnPlatformLength, "right");
-  const secondMovingPlatformKillBlock = spike(
-    secondMovingPlatformX + movingPlatformWidth / 2 - BLOCK_SIZE / 2,
-    secondMovingPlatformStartY + BLOCK_SIZE / 2 + 8,
-    movingPlatformWidth,
-    16
-  );
   const secondMovingPlatformSlug = {
     x: secondMovingPlatformX + movingPlatformWidth / 2 - BLOCK_SIZE / 2,
     y: secondMovingPlatformStartY - BLOCK_SIZE / 2 - 12,
@@ -186,15 +185,10 @@ export function buildLevel(canvasHeight) {
     platform.physics = 'kinematic';
     platform.vel.y = -2;
   }
-  movingPlatformKillBlock.physics = 'kinematic';
-  movingPlatformKillBlock.vel.y = -2;
   for (const platform of secondMovingPlatform) {
     platform.physics = 'kinematic';
     platform.vel.y = -2;
   }
-  secondMovingPlatformKillBlock.physics = 'kinematic';
-  secondMovingPlatformKillBlock.vel.y = -2;
-
   function updateMovingPlatform() {
     const currentY = movingPlatform[0].y;
 
@@ -214,9 +208,6 @@ export function buildLevel(canvasHeight) {
     for (const platform of movingPlatform) {
       platform.vel.y = velocity;
     }
-    movingPlatformKillBlock.y = movingPlatform[0].y + BLOCK_SIZE / 2 + movingPlatformKillBlock.h / 2;
-    movingPlatformKillBlock.vel.y = velocity;
-
     const secondCurrentY = secondMovingPlatform[0].y;
 
     if (secondCurrentY <= secondMovingPlatformTopY) {
@@ -235,8 +226,6 @@ export function buildLevel(canvasHeight) {
     for (const platform of secondMovingPlatform) {
       platform.vel.y = secondVelocity;
     }
-    secondMovingPlatformKillBlock.y = secondMovingPlatform[0].y + BLOCK_SIZE / 2 + secondMovingPlatformKillBlock.h / 2;
-    secondMovingPlatformKillBlock.vel.y = secondVelocity;
   }
 
   // =========================================================
@@ -296,28 +285,21 @@ export function buildLevel(canvasHeight) {
       platform.y = movingPlatformStartY;
       platform.vel.y = -2;
     }
-    movingPlatformKillBlock.y = movingPlatformStartY + BLOCK_SIZE / 2 + movingPlatformKillBlock.h / 2;
-    movingPlatformKillBlock.vel.y = -2;
-
     // Second moving platform
     secondMovingPlatformDirection = -1;
     for (const platform of secondMovingPlatform) {
       platform.y = secondMovingPlatformStartY;
       platform.vel.y = -2;
     }
-    secondMovingPlatformKillBlock.y = secondMovingPlatformStartY + BLOCK_SIZE / 2 + secondMovingPlatformKillBlock.h / 2;
-    secondMovingPlatformKillBlock.vel.y = -2;
   }
 
   function freezeMovingPlatforms() {
     for (const platform of movingPlatform) {
       platform.vel.y = 0;
     }
-    movingPlatformKillBlock.vel.y = 0;
     for (const platform of secondMovingPlatform) {
       platform.vel.y = 0;
     }
-    secondMovingPlatformKillBlock.vel.y = 0;
   }
 
   return {
