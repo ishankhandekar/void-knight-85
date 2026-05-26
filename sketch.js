@@ -27,10 +27,33 @@ const player = new Player(level.spawnX, level.spawnY, level.platforms);
 camera.x = level.spawnX + 10;
 camera.y = level.spawnY + 10;
 
-function stopEnemies(enemies) {
+function freezeEnemies(enemies) {
   for (const enemy of enemies) {
+    if (enemy.sprite.deleted) continue;
     enemy.sprite.vel.x = 0;
     enemy.sprite.vel.y = 0;
+    if (enemy.sprite.physics !== 'kinematic') {
+      enemy.sprite._wasDynamic = true;
+      enemy.sprite.physics = 'kinematic';
+    }
+    if (enemy instanceof Mage) {
+      for (const fb of enemy.fireballs) {
+        if (!fb.deleted && !fb._inPool) {
+          fb.vel.x = 0;
+          fb.vel.y = 0;
+        }
+      }
+    }
+  }
+}
+
+function unfreezeEnemies(enemies) {
+  for (const enemy of enemies) {
+    if (enemy.sprite.deleted) continue;
+    if (enemy.sprite._wasDynamic) {
+      enemy.sprite.physics = 'dynamic';
+      delete enemy.sprite._wasDynamic;
+    }
   }
 }
 // Enemies: patrol(x, y, leftBound, rightBound, platforms)
@@ -65,7 +88,7 @@ function setupEnemyOverlaps() {
         playerSprite.vel.y = -7;
       } else {
         player.die();
-        stopEnemies(enemies);
+        freezeEnemies(enemies);
       }
     });
   }
@@ -278,13 +301,21 @@ q5.update = function () {
   }
 
   if (gameStarted && !levelComplete) {
-    level.update();
     player.update(enemies);
     if (!player.isDying) {
+      level.update();
+      if (player._enemiesFrozen) {
+        unfreezeEnemies(enemies);
+        player._enemiesFrozen = false;
+      }
       for (const enemy of enemies) {
         if (enemy instanceof Mage) enemy.update(player);
         else enemy.update();
       }
+    } else {
+      freezeEnemies(enemies);
+      level.freeze();
+      player._enemiesFrozen = true;
     }
 
     // Check if player reached the door

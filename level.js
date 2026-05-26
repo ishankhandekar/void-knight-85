@@ -309,12 +309,24 @@ export function buildLevel(canvasHeight) {
     secondMovingPlatformKillBlock.vel.y = -2;
   }
 
+  function freezeMovingPlatforms() {
+    for (const platform of movingPlatform) {
+      platform.vel.y = 0;
+    }
+    movingPlatformKillBlock.vel.y = 0;
+    for (const platform of secondMovingPlatform) {
+      platform.vel.y = 0;
+    }
+    secondMovingPlatformKillBlock.vel.y = 0;
+  }
+
   return {
     platforms: platformGroup,
     door: doorSprite,
     movingPlatformSlug,
     secondMovingPlatformSlug,
     update: updateMovingPlatform,
+    freeze: freezeMovingPlatforms,
     reset: resetMovingPlatforms,
     spawnX,
     spawnY
