@@ -134,8 +134,7 @@ function stopwatchStartPressed() {
     keyboard.pressing('up') ||
     keyboard.pressing('down') ||
     keyboard.pressing('left') ||
-    keyboard.pressing('right') ||
-    keyboard.presses('`');
+    keyboard.pressing('right');
 }
 
 function startStopwatch() {
@@ -152,18 +151,16 @@ function stopStopwatch() {
   stopwatchElement.textContent = formatStopwatch(stopwatchElapsedMs);
 }
 
+const KILL_BONUS = { mage: 50, bat: 25, slug: 10 };
+
 function scoreForTime(milliseconds) {
   const seconds = milliseconds / 1000;
 
-  if (seconds < 15) {
-    return 500;
-  } else if (seconds < 35) {
-    return 400;
-  } else if (seconds < 45) {
-    return 300;
-  } else {
-    return 200;
-  }
+  if (seconds < 45)       return 1000;
+  else if (seconds < 60)  return 500;
+  else if (seconds < 90)  return 400;
+  else if (seconds < 120) return 200;
+  else                     return 100;
 }
 
 function getBestScore() {
@@ -201,18 +198,49 @@ function hideStartScreen() {
 }
 
 function showLevelCompleteScreen() {
-  const score = scoreForTime(stopwatchElapsedMs);
+  const timeScore = scoreForTime(stopwatchElapsedMs);
+  const kills = player.kills;
 
-  updatePersonalRecords(score, stopwatchElapsedMs);
+  let killLines = [];
+  let killTotal = 0;
+  for (const [type, bonus] of Object.entries(KILL_BONUS)) {
+    const count = kills[type] || 0;
+    if (count > 0) {
+      killLines.push(`${type} x${count} = ${count * bonus}`);
+      killTotal += count * bonus;
+    }
+  }
 
-  levelCompleteScore.textContent = `Score: ${score}`;
-  levelCompleteTime.textContent = `Time: ${formatStopwatch(stopwatchElapsedMs)}`;
+  const totalScore = timeScore + killTotal;
+  updatePersonalRecords(totalScore, stopwatchElapsedMs);
+
+  levelCompleteScore.textContent = `Score: ${totalScore}`;
+  levelCompleteTime.textContent = `Time: ${formatStopwatch(stopwatchElapsedMs)} (${timeScore} pts)`;
+
+  const breakdownEl = document.getElementById('level-complete-breakdown');
+  if (killLines.length > 0) {
+    breakdownEl.textContent = `Kills: ${killLines.join(' | ')}`;
+  } else {
+    breakdownEl.textContent = 'Kills: none';
+  }
+  breakdownEl.style.display = 'block';
+
   levelCompleteRecords.textContent = `Best Score: ${getBestScore()} | Best Time: ${formatBestTime(getBestTime())}`;
   levelCompleteScreen.style.display = 'flex';
 }
 
 function hideLevelCompleteScreen() {
   levelCompleteScreen.style.display = 'none';
+}
+
+const infoScreen = document.getElementById('info-screen');
+
+function toggleInfoScreen() {
+  infoScreen.style.display = infoScreen.style.display === 'flex' ? 'none' : 'flex';
+}
+
+function hideInfoScreen() {
+  infoScreen.style.display = 'none';
 }
 
 function resetStopwatch() {
@@ -265,6 +293,12 @@ q5.update = function () {
   if (!gameStarted && keyboard.presses('enter')) {
     gameStarted = true;
     hideStartScreen();
+    hideInfoScreen();
+    resetLevel();
+  }
+
+  if (!gameStarted && keyboard.presses('i')) {
+    toggleInfoScreen();
   }
 
   if (gameStarted && !levelComplete && !stopwatchRunning && !stopwatchFinished && stopwatchStartPressed()) {

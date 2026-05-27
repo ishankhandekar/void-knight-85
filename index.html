@@ -47,7 +47,8 @@
 		}
 
 		#start-screen,
-		#level-complete-screen {
+		#level-complete-screen,
+		#info-screen {
 			position: fixed;
 			inset: 0;
 			align-items: center;
@@ -59,6 +60,36 @@
 			font-family: monospace;
 			pointer-events: none;
 			z-index: 200;
+		}
+
+		#info-screen {
+			display: none;
+			z-index: 210;
+			gap: 12px;
+			padding: 40px;
+			text-align: left;
+		}
+
+		#info-screen h1 {
+			margin: 0;
+			color: #f1c40f;
+			font-size: 36px;
+			text-align: center;
+		}
+
+		#info-screen .info-section {
+			font-size: 16px;
+			line-height: 1.6;
+		}
+
+		#info-screen .info-section span {
+			color: #f1c40f;
+		}
+
+		#info-back {
+			font-size: 16px;
+			color: #7f8c8d;
+			text-align: center;
 		}
 
 		#start-screen {
@@ -80,7 +111,8 @@
 		#start-time,
 		#level-complete-score,
 		#level-complete-records,
-		#level-complete-time {
+		#level-complete-time,
+		#level-complete-breakdown {
 			font-size: 24px;
 		}
 
@@ -132,19 +164,46 @@
 	<div id="made-with-q5play" style="display:none"></div>
 	
 		<div id="debug-hud">
-			<div id="hud-fly" class="hud-tag">FLY MODE [`]</div>
+			<div id="hud-fly" class="hud-tag" style="display:none !important"></div>
 			<div id="hud-debug" class="hud-tag">DEBUG MODE [~]</div>
 		</div>
 		<div id="stopwatch">00:00.00</div>
 		<div id="start-screen">
 			<h1>Ready?</h1>
 			<div id="start-time">Time: 00:00.00</div>
-			<div id="start-prompt">Press Enter to start</div>
+			<div id="start-prompt">Press Enter to start | Press I for info</div>
+		</div>
+		<div id="info-screen">
+			<h1>How to Play</h1>
+			<div class="info-section">
+				<span>Arrow Keys / WASD</span> — Move<br>
+				<span>Up / W / Space</span> — Jump<br>
+				<span>P</span> — Attack (horizontal swing)<br>
+				<span>S / Down (midair)</span> — Smash attack (downward slam)<br>
+				<span>R</span> — Restart level
+			</div>
+			<div class="info-section">
+				<span>Tips</span><br>
+				• Holding jump makes you go higher<br>
+				• Press into a wall while falling to wall slide<br>
+				• Jump off walls to wall jump<br>
+				• Smash attack slams you downward — kills enemies below<br>
+				• Green pads launch you high<br>
+				• Press ~ to toggle debug mode
+			</div>
+			<div class="info-section">
+				<span>Scoring</span><br>
+				• Under 45s = 1000 pts | Under 1 min = 500 pts<br>
+				• Under 1:30 = 400 pts | Under 2 min = 200 pts | 3 min+ = 100 pts<br>
+				• Mage kill = 50 pts | Bat kill = 25 pts | Slug kill = 10 pts
+			</div>
+			<div id="info-back">Press I to go back</div>
 		</div>
 		<div id="level-complete-screen">
 			<h1>Level Complete!</h1>
 			<div id="level-complete-score">Score: 0</div>
 			<div id="level-complete-time">Time: 00:00.00</div>
+			<div id="level-complete-breakdown" style="display:none; font-size:18px;"></div>
 			<div id="level-complete-records">Best Score: 0 | Best Time: --:--.--</div>
 			<div id="level-complete-restart">Press R to restart</div>
 		</div>

@@ -8,6 +8,7 @@ export class Mage extends Enemy {
         this.detectionRange = 250;
         this.fireballSpeed = 4;
         this.cooldown = 500;
+        this.fireballArmDistance = 3;
         this.lastFireTime = now;
         this.charging = false;
         this.fireballs = [];
@@ -214,7 +215,11 @@ export class Mage extends Enemy {
 
                 if (player && !player.isDying && !player.flyMode) {
                     fb.overlaps(player.sprite, (fireball, pSprite) => {
-                        if (player.isDying || player.flyMode || fireball._inPool) return;
+                        const fdx = fireball.x - this.sprite.x;
+                        const fdy = fireball.y - this.sprite.y;
+                        const tooClose = (fdx * fdx + fdy * fdy) < this.fireballArmDistance * this.fireballArmDistance;
+                        const smashing = player.smashAnimation2 && player.sprite.ani.frame >= player.sprite.ani.lastFrame;
+                        if (player.isDying || player.flyMode || fireball._inPool || tooClose || smashing) return;
                         player.die();
                         this._returnFireball(fireball);
                         const idx = this.fireballs.indexOf(fireball);

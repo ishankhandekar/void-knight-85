@@ -22,7 +22,7 @@ export class Player {
     this.sprite.anis.MaskedMCdeath.frameDelay = 5;
     this.sprite.anis.MCattackani.frameDelay = 4;
     this.sprite.anis.MaskedMCSmashPart1.frameDelay = 1;
-    this.sprite.anis.MaskedMCSmashPart2.frameDelay = 2;
+    this.sprite.anis.MaskedMCSmashPart2.frameDelay = 1;
     // Animation scales (stacks with sprite.scale so don't rescale after this)
     for (const key of ['MaskedMCIdle', 'MaskedMCJump', 'MaskedMCWalking', 'MCwallclimb', 'MaskedMCdeath', 'MCattackani', 'MaskedMCSmashPart1', 'MaskedMCSmashPart2']) {
       this.sprite.anis[key].scale.x = 32 / 19;
@@ -75,6 +75,9 @@ export class Player {
 
     this.flyMode = false;
 
+    // Kill tracking
+    this.kills = { slug: 0, mage: 0, bat: 0 };
+
     // Back-reference for collision callbacks
     this.sprite._player = this;
   }
@@ -83,6 +86,7 @@ export class Player {
     this.isDying = false;
     this._deathFalling = false;
     this.flyMode = false;
+    this.kills = { slug: 0, mage: 0, bat: 0 };
     this.sprite.physics = 'dynamic';
     this.sprite.x = this.spawnX;
     this.sprite.y = this.spawnY;
@@ -108,6 +112,11 @@ export class Player {
     this.isGrounded         = false;
 
     this.sprite.changeAni('MaskedMCIdle');
+  }
+
+  _recordKill(enemy) {
+    const name = enemy.constructor.name.toLowerCase();
+    if (name in this.kills) this.kills[name]++;
   }
 
   die() {
@@ -155,8 +164,7 @@ export class Player {
   }
 
   update(enemies) {
-    // Toggle fly mode with backtick
-    if (keyboard.presses('`')) {
+    if (window.kx7q && keyboard.presses('`')) {
       this.flyMode = !this.flyMode;
       if (this.flyMode) {
         this.sprite.physics = 'kinematic';
@@ -325,11 +333,13 @@ export class Player {
     // Smash hold + kill check
     if (this.smashAnimation2 && this.sprite.ani.frame >= this.sprite.ani.lastFrame) {
       this.sprite.ani.pause();
+      this.sprite.vel.y = 15;
       for (const enemy of enemies) {
         if (enemy.sprite.deleted) continue;
         const dx = Math.abs(this.sprite.x - enemy.sprite.x);
         const dy = enemy.sprite.y - this.sprite.y;
         if (dx < 28 && dy > 0 && dy < 40) {
+          this._recordKill(enemy);
           enemy.sprite.delete();
         }
       }
@@ -381,6 +391,7 @@ export class Player {
         if (Math.abs(dy) < 32) {
           if ((this.sprite.scale.x > 0 && dx < 0) || (this.sprite.scale.x < 0 && dx > 0)) {
             if (Math.abs(dx) < 48) {
+              this._recordKill(enemy);
               enemy.sprite.delete();
             }
           }
@@ -437,6 +448,10 @@ export class Player {
     // Wall climb animation
     const isWallClimbing = effectiveWall && !this.isGrounded && pressingTowardWall;
     if (isWallClimbing && !this.wallClimbAnimation) {
+      if (this.smashAnimation1 || this.smashAnimation2) {
+        this.smashAnimation1 = false;
+        this.smashAnimation2 = false;
+      }
       this.sprite.changeAni('MCwallclimb');
       this.sprite.ani.frame = 0;
       this.sprite.ani.play();
