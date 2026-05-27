@@ -1,7 +1,3 @@
-// Planned additions:
-// 1. Star pixels with score updates based on how many the player collects.
-// 2. Magic fireball wizard?
-
 export function buildLevel(canvasHeight) {
   const platformGroup = new Group();
   const honeyGroup = new Group();
@@ -14,15 +10,12 @@ export function buildLevel(canvasHeight) {
     wall: 'Sprites/textures/walltexture.png'
   };
 
-  // Only affect the player, not platforms, hazards, or the door.
+  // Only affect the player
   function isPlayerTarget(sprite) {
     return sprite && sprite.rotationLock === true;
   }
 
-  // =========================================================
-  // REQUIRED FUNCTION #1
-  // Creates one block at the given x and y position.
-  // =========================================================
+  // Creates one block
   function blocks(x, y, texture = 'platform') {
     const b = new platformGroup.Sprite(x, y, BLOCK_SIZE, BLOCK_SIZE);
     b.physics = STATIC;
@@ -41,13 +34,7 @@ export function buildLevel(canvasHeight) {
     return b;
   }
 
-  // =========================================================
-  // REQUIRED FUNCTION #2
-  // Creates a line of blocks using a for loop.
-  //
-  // direction can be:
-  // "right", "left", "up", or "down"
-  // =========================================================
+  // Creates a line of blocks in a direction
   function blockLine(x, y, block_count, direction, texture = 'platform') {
     const lineBlocks = [];
 
@@ -73,9 +60,7 @@ export function buildLevel(canvasHeight) {
     return lineBlocks;
   }
 
-  // =========================================================
-  // HAZARD / SPECIAL BLOCK HELPERS
-  // =========================================================
+  // Hazards
   function spike(x, y, w = 50, h = 16) {
     const s = new spikeGroup.Sprite(x, y, w, h);
     s.physics = STATIC;
@@ -118,20 +103,14 @@ export function buildLevel(canvasHeight) {
     return jp;
   }
 
-  // =========================================================
-  // OUTER BORDER
-  // Border blocks do not overlap with the interior platforms.
-  // =========================================================
+  // Outer border
 
-  blockLine(-680, 700, 35, "right", "wall"); // bottom floor
+  blockLine(-680, 700, 35, "right", "wall");  // bottom floor
   blockLine(-680, -300, 35, "right", "wall"); // top ceiling
-  blockLine(-720, -260, 24, "down", "wall"); // left wall
-  blockLine(720, -260, 24, "down", "wall"); // right wall
+  blockLine(-720, -260, 24, "down", "wall");  // left wall
+  blockLine(720, -260, 24, "down", "wall");   // right wall
 
-  // =========================================================
-  // MAIN PATH
-  // Interior platforms stay off the border and use 40px grid spacing.
-  // =========================================================
+  // Main path
 
   const START_ROW = 620;
   const PLAYER_SIZE = 32;
@@ -271,9 +250,7 @@ export function buildLevel(canvasHeight) {
     updateHazardAnimations();
   }
 
-  // =========================================================
-  // DOOR
-  // =========================================================
+  // Door
 
   const doorSprite = new Sprite(600, -230, 80, 140);
   doorSprite.physics = STATIC;
@@ -289,26 +266,19 @@ export function buildLevel(canvasHeight) {
   doorSprite.changeAni("portaltexture");
   doorSprite.ani.play();
   
-  // =========================================================
-  // SPAWN
-  // =========================================================
+  // Spawn
 
   const spawnX = -680;
   const spawnY = 580;
 
-  // =========================================================
-  // INTERACTIONS
-  // =========================================================
-
+  // Honey slows movement and reduces jump height
   honeyGroup.colliding(allSprites, (honey, sprite) => {
     if (!isPlayerTarget(sprite)) return;
 
     sprite._onHoney = true;
 
-    // Slows horizontal movement.
     sprite.vel.x *= 0.65;
 
-    // Reduces jump height while on honey.
     if (sprite.vel.y < -3.5) {
       sprite.vel.y = -3.5;
     }

@@ -12,7 +12,6 @@ export class Enemy {
     this._buildSprite(x, y);
   }
 
-  /** Create (or recreate) the physics sprite at the given position. */
   _buildSprite(x, y) {
     if (this.sprite && !this.sprite.deleted) this.sprite.delete();
     this.sprite = new Sprite(x, y, 24, 24, 'd');
@@ -24,11 +23,6 @@ export class Enemy {
     this.sprite.strokeWeight = 2;
   }
 
-  /**
-   * Reset back to the spawn position.
-   * Recreates the sprite so previously-killed enemies are restored.
-   * Subclasses should call super.reset() then re-add their animations.
-   */
   reset() {
     this._buildSprite(this.spawnX, this.spawnY);
     this.dir = 1;
@@ -37,13 +31,13 @@ export class Enemy {
   update() {
     if (this.sprite.deleted) return;
 
-    // Stationary enemy — no patrol movement
+    // Stationary enemy
     if (this.patrolLeft >= this.patrolRight) {
       this.sprite.vel.x = 0;
       return;
     }
 
-    // Clamp to patrol bounds so overshooting is impossible
+    // Clamp to patrol bounds
     if (this.sprite.x > this.patrolRight) {
       this.sprite.x = this.patrolRight;
       this.dir = -1;
@@ -60,7 +54,7 @@ export class Enemy {
       this.sprite.scale.x = 1;
     }
 
-    // Check for platform edge ahead to avoid walking off — only when grounded
+    // Edge detection
     const halfW = this.sprite.w / 2;
     const halfH = this.sprite.h / 2;
     const enemyBottom = this.sprite.y + halfH;
@@ -88,7 +82,7 @@ export class Enemy {
       this.sprite.scale.x = this.dir;
     }
 
-    // Move horizontally
+    // Patrol movement
     this.sprite.vel.x = this.dir * this.speed;
 
   }

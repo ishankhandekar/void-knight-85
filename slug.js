@@ -1,4 +1,3 @@
-// Slug class inherits the properties of the enemies class
 import { Enemy } from './enemy.js';
 
 export class Slug extends Enemy {
@@ -16,7 +15,7 @@ export class Slug extends Enemy {
     }
 
     reset() {
-        super.reset();          // rebuilds this.sprite at spawnX/spawnY
-        this._applySlugAni();   // re-attach animation to the new sprite
+        super.reset();
+        this._applySlugAni();
     }
 }

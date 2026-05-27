@@ -19,11 +19,8 @@ export class Mage extends Enemy {
         this._initFireballPool();
     }
 
+    // Pre-create hidden fireballs so animations are loaded before the first shot
     async _initFireballPool() {
-        // Pre-create hidden fireballs so the animation is loaded before the first shot.
-        // Sprites are parked far outside the world (x=5000, y=5000) as kinematic with
-        // zero velocity — this avoids any physics-type switching when reusing them and
-        // keeps them well clear of platforms and game sprites.
         const POOL_SIZE = 3;
         const PARK_X = 5000;
         const PARK_Y = 5000;
@@ -45,7 +42,6 @@ export class Mage extends Enemy {
     }
 
     _getFireball(x, y) {
-        // Grab a pooled fireball — physics stays 'kinematic' the whole time, no type switch.
         for (const fb of this._fireballPool) {
             if (fb._inPool && !fb.deleted) {
                 fb.x = x;
@@ -60,7 +56,7 @@ export class Mage extends Enemy {
                 return fb;
             }
         }
-        // Pool exhausted fallback — animation image is already cached so addAni is fast.
+        // Pool exhausted fallback
         const fb = new Sprite(x, y, 12, 12);
         fb.physics = 'kinematic';
         fb.addAni('Sprites/fireball.png', 3, '32x32');
@@ -74,8 +70,6 @@ export class Mage extends Enemy {
     }
 
     _returnFireball(fb) {
-        // Return a fireball to the pool: zero out velocity first (body still exists),
-        // then park it far off-screen and hide it. Physics stays 'kinematic'.
         if (this._fireballPool.includes(fb)) {
             fb.vel.x = 0;
             fb.vel.y = 0;
@@ -100,12 +94,11 @@ export class Mage extends Enemy {
     }
 
     reset() {
-        // Delete any live fireballs from this mage before rebuilding the sprite
+        // Clean up fireballs
         for (const fb of this.fireballs) {
             if (!fb.deleted && !fb._inPool) fb.delete();
         }
         this.fireballs = [];
-        // Also delete the pooled (hidden) fireballs so they don't linger
         for (const fb of (this._fireballPool || [])) {
             if (!fb.deleted) fb.delete();
         }
@@ -114,9 +107,9 @@ export class Mage extends Enemy {
         this.targetX = 0;
         this.targetY = 0;
 
-        super.reset();          // rebuilds this.sprite at spawnX/spawnY
-        this._applyMageAni();   // re-attach animation to the new sprite
-        this._initFireballPool(); // rebuild the hidden preload pool
+        super.reset();
+        this._applyMageAni();
+        this._initFireballPool();
     }
 
     canSeePlayer(playerSprite) {
@@ -126,7 +119,7 @@ export class Mage extends Enemy {
 
         if (dist > this.detectionRange) return false;
 
-        // Raycast: step along the line and check for platform collisions
+        // Raycast
         const stepSize = 8;
         const steps = Math.ceil(dist / stepSize);
         const stepX = dx / steps;
@@ -156,7 +149,7 @@ export class Mage extends Enemy {
 
         if (this.sprite.deleted) return;
 
-        // Update existing fireballs — remove if too far or hit a platform
+        // Update fireballs
         for (let i = this.fireballs.length - 1; i >= 0; i--) {
             const fb = this.fireballs[i];
             if (fb.deleted) {
@@ -172,7 +165,7 @@ export class Mage extends Enemy {
                 continue;
             }
 
-            // Destroy on platform collision
+            // Platform collision
             for (const plat of this.groundGroup) {
                 const pL = plat.x - plat.w / 2;
                 const pR = plat.x + plat.w / 2;
@@ -198,14 +191,12 @@ export class Mage extends Enemy {
                 this.sprite.ani.frame = 0;
                 this.sprite.ani.pause();
 
-                // Fire toward saved target position
+                // Fire
                 const dx = this.targetX - this.sprite.x;
                 const dy = this.targetY - this.sprite.y;
                 const dist = Math.sqrt(dx * dx + dy * dy) || 1;
 
-                // Spawn from the mage's upper-center (y - 8) so horizontal shots don't
-                // immediately hit the platform the mage is standing on.
-                // spawnOffset=30 gives enough clearance past the mage's own collider (≈13px radius).
+                // Spawn offset clears the mage's own collider
                 const spawnOffset = 30;
                 const originX = this.sprite.x;
                 const originY = this.sprite.y - 8;
@@ -236,7 +227,7 @@ export class Mage extends Enemy {
             return;
         }
 
-        // Start charge if player is visible, not in fly mode, and cooldown is ready
+        // Start charge
         if (playerSprite && !player.flyMode && now - this.lastFireTime >= this.cooldown && this.canSeePlayer(playerSprite)) {
             this.charging = true;
             this.targetX = playerSprite.x;
@@ -251,7 +242,7 @@ export class Mage extends Enemy {
             return;
         }
 
-        // Normal patrol
+        // Patrol
         super.update();
     }
 }

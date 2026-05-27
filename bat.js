@@ -42,6 +42,7 @@ export class Bat extends Enemy {
         this._applyBatAni();
     }
 
+    // Raycast to check line of sight
     canSeePlayer(playerSprite) {
         const dx = playerSprite.x - this.sprite.x;
         const dy = playerSprite.y - this.sprite.y;
@@ -73,6 +74,7 @@ export class Bat extends Enemy {
         return true;
     }
 
+    // Predictive wall collision
     _hitsWall(vx, vy) {
         const halfW = this.sprite.w / 2;
         const halfH = this.sprite.h / 2;
@@ -93,6 +95,7 @@ export class Bat extends Enemy {
         return false;
     }
 
+    // Kinematic sprites don't get pushed by physics so we resolve overlaps manually
     _pushOutOfPlatforms() {
         const halfW = this.sprite.w / 2;
         const halfH = this.sprite.h / 2;

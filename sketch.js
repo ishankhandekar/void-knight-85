@@ -24,7 +24,7 @@ world.gravity.y = 20;
 const level = buildLevel(height);
 const player = new Player(level.spawnX, level.spawnY, level.platforms);
 
-//Start the camera on the player immediately
+// Start camera on the player
 camera.x = level.spawnX + 10;
 camera.y = level.spawnY + 10;
 
@@ -69,7 +69,7 @@ function unfreezeEnemies(enemies) {
     }
   }
 }
-// Enemies: patrol(x, y, leftBound, rightBound, platforms)
+// Enemies
 const enemies = [
   new Slug(
     level.movingPlatformSlug.x,
@@ -93,8 +93,7 @@ const enemies = [
   new Bat(520, -220, 0, level.platforms),
 ];
 
-// Use q5play's overlap system (same as spikes/jump pads) so physics separation
-// doesn't prevent detection. overlaps() fires without resolving collision physics.
+// Enemy-player overlap detection
 function setupEnemyOverlaps() {
   for (const enemy of enemies) {
     enemy.sprite.overlaps(player.sprite, (enemySprite, playerSprite) => {
@@ -225,24 +224,18 @@ function resetStopwatch() {
 }
 
 function resetLevel() {
-  // Reset player to exact spawn position and clear all movement/animation state
   player.reset();
 
-  // Reset camera to spawn immediately (no lerp lag)
   camera.x = level.spawnX + 10;
   camera.y = level.spawnY + 10;
 
-  // Reset all enemies — restores killed ones and repositions live ones
   for (const enemy of enemies) {
     enemy.reset();
   }
-  // Re-register overlap callbacks because enemy sprites were recreated
   setupEnemyOverlaps();
 
-  // Reset moving platforms to their exact start positions
   level.reset();
 
-  // Reset stopwatch
   resetStopwatch();
 }
 
@@ -263,7 +256,7 @@ function playerTouchesDoor() {
 }
 
 q5.update = function () {
-  // Toggle collision debug with ~ (shift+backtick)
+  // Debug toggle
   if (keyboard.presses('~')) {
     debugMode = !debugMode;
     allSprites.debug = debugMode;
@@ -334,7 +327,7 @@ q5.update = function () {
 
     level.updateSpikes();
 
-    // Check if player reached the door
+    // Door check
     if (!player.flyMode && playerTouchesDoor()) {
       stopStopwatch();
       levelComplete = true;
@@ -342,10 +335,9 @@ q5.update = function () {
     }
   }
 
-  // Press R at any time to reset the level to the exact starting position
+  // Reset
   if (gameStarted && keyboard.presses('r')) {
     if (levelComplete) {
-      // From end screen: go back to start screen
       levelComplete = false;
       gameStarted = false;
       hideLevelCompleteScreen();
@@ -354,7 +346,7 @@ q5.update = function () {
     resetLevel();
   }
 
-  // Sync debug HUD tags in the HTML overlay
+  // HUD
   document.getElementById('hud-fly').style.display   = player.flyMode ? 'block' : 'none';
   document.getElementById('hud-debug').style.display = debugMode      ? 'block' : 'none';
 };

@@ -23,8 +23,7 @@ export class Player {
     this.sprite.anis.MCattackani.frameDelay = 4;
     this.sprite.anis.MaskedMCSmashPart1.frameDelay = 1;
     this.sprite.anis.MaskedMCSmashPart2.frameDelay = 2;
-    // No need to scale after this
-    // if you scale sprite after this it applies on top (stacks)
+    // Animation scales (stacks with sprite.scale so don't rescale after this)
     for (const key of ['MaskedMCIdle', 'MaskedMCJump', 'MaskedMCWalking', 'MCwallclimb', 'MaskedMCdeath', 'MCattackani', 'MaskedMCSmashPart1', 'MaskedMCSmashPart2']) {
       this.sprite.anis[key].scale.x = 32 / 19;
       this.sprite.anis[key].scale.y = 32 / 19;
@@ -76,11 +75,10 @@ export class Player {
 
     this.flyMode = false;
 
-    // Back-reference so collision callbacks in level.js can call die()
+    // Back-reference for collision callbacks
     this.sprite._player = this;
   }
 
-  /** Full reset to exact spawn position — safe to call at any time. */
   reset() {
     this.isDying = false;
     this._deathFalling = false;
@@ -125,7 +123,6 @@ export class Player {
     this.sprite.ani.pause();
   }
 
-  /** Instant death — skips the fall phase and immediately plays the death animation in place. */
   dieInstant() {
     if (this.isDying) return;
     this.isDying = true;
@@ -207,7 +204,7 @@ export class Player {
       return;
     }
 
-    // Player edge positions (sprite is 32x32, centered)
+    // Player edge positions
     const halfWidth  = this.sprite.w / 2;
     const halfHeight = this.sprite.h / 2;
     const playerBottom = this.sprite.y + halfHeight;
@@ -217,7 +214,7 @@ export class Player {
 
     const now = Date.now();
 
-    // Check if player is on ground or touching a wall by comparing edges to every platform
+    // Ground and wall detection
     this.isGrounded = false;
     let groundPlatVelY = 0;
     let onWall = 0; // 0 = none, +1 = wall on left, -1 = wall on right
@@ -230,8 +227,7 @@ export class Player {
 
       const horizontalOverlap = playerRight > platLeft + 1 && playerLeft < platRight - 1;
 
-      // Grounded if bottom is near platform top and not jumping upward
-      // For moving platforms, widen the detection window by the platform's speed
+      // Grounded check (widened for moving platform speed)
       const platSpeed = Math.abs(plat.vel.y || 0);
       if (!this.isGrounded && horizontalOverlap &&
           playerBottom >= platTop - 6 - platSpeed && playerBottom <= platTop + 8 + platSpeed &&
@@ -240,8 +236,7 @@ export class Player {
         groundPlatVelY = plat.vel.y || 0;
       }
 
-      // Wall detected if player's side is within 9px of a platform edge
-      // Guard removed from !this.isGrounded so fast ground-to-wall transitions don't miss detection
+      // Wall detection
       if (!onWall) {
         const verticalOverlap = playerBottom > platTop + 2 && playerTop < platBottom - 2;
         if (Math.abs(playerLeft - platRight) < 9 && verticalOverlap) onWall =  1;
@@ -249,18 +244,18 @@ export class Player {
       }
     }
 
-    // On landing: save timestamp for edge jump grace period, cancel wall jump arc, stop downward velocity
+    // On landing
     if (this.isGrounded) {
       this.lastGroundedTime = now;
       this.lastWallJumpTime = 0;
       this.wallJumpForceDir = 0;
-      // Ride with moving platforms — match their vertical velocity instead of zeroing out
+      // Ride with moving platforms
       if (groundPlatVelY !== 0) {
         this.sprite.vel.y = groundPlatVelY;
       } else if (this.sprite.vel.y > 0) {
         this.sprite.vel.y = 0;
       }
-      // Clear smash state so idle/walk animation can resume
+      // Clear smash state
       if (this.smashAnimation1 || this.smashAnimation2) {
         this.smashAnimation1 = false;
         this.smashAnimation2 = false;
@@ -268,23 +263,19 @@ export class Player {
       }
     }
 
-    // Edge jump grace time: allow jumping for 150ms after leaving the ground
+    // Edge jump grace
     const edgeJumpAllowed = !this.isGrounded &&
       this.lastGroundedTime > 0 &&
       (now - this.lastGroundedTime) < this.edgeJumpGraceMs &&
       this.sprite.vel.y >= 0;
 
-    // Block re-grabbing the same wall right after wall-jumping off it
-    // Not really necessary but we will keep it
+    // Re-grab cooldown
     const reGrabBlocked = (now - this.lastWallJumpTime) < this.reGrabCooldown &&
                           onWall === this.lastWallDir;
     const effectiveWall = reGrabBlocked ? 0 : onWall;
 
 
-    // Arc cancellation moved to after wall-jump logic so momentum isn't stripped
-    // before the new jump can fire (see below)
-
-    // Read keyboard input (held = continuous, presses = first frame only)
+    // Input
     const left  = keyboard.pressing('left')  || keyboard.pressing('a');
     const right = keyboard.pressing('right') || keyboard.pressing('d');
     const jumpPressed = keyboard.presses('up') || keyboard.presses('w') || keyboard.presses('space');
@@ -302,7 +293,7 @@ export class Player {
     const currentWallJumpPower = onHoney ?
     this.wallJumpPower * 0.55 : this.wallJumpPower;
 
-    // Jump buffer: remember jump press for 120ms so pressing slightly before landing still works
+    // Jump buffer
     if (jumpPressed) {
       this.lastJumpPressTime = now;
       this.sprite.changeAni('MaskedMCJump');
@@ -331,10 +322,9 @@ export class Player {
       this.sprite.ani.play();
     }
 
-    // When Part2 reaches last frame, hold it there — state clears on landing
+    // Smash hold + kill check
     if (this.smashAnimation2 && this.sprite.ani.frame >= this.sprite.ani.lastFrame) {
       this.sprite.ani.pause();
-      // Smash kill: destroy any enemy directly below while the last frame is active
       for (const enemy of enemies) {
         if (enemy.sprite.deleted) continue;
         const dx = Math.abs(this.sprite.x - enemy.sprite.x);
@@ -345,7 +335,7 @@ export class Player {
       }
     }
 
-    // Wall jump arc: apply decaying horizontal push away from the wall
+    // Wall jump arc
     const wallJumpAge = now - this.lastWallJumpTime;
     const inArc = !this.isGrounded && this.wallJumpForceDir !== 0;
 
@@ -354,8 +344,6 @@ export class Player {
       if (decayedVx < this.wallJumpEndVx) {
         this.wallJumpForceDir = 0;
       } else {
-        // Only override vel.x if the arc would push faster than current speed in that direction
-        // Prevents the arc from slowing a fast-moving player mid-air
         const arcVx = this.wallJumpForceDir * decayedVx;
         if (this.wallJumpForceDir * this.sprite.vel.x < decayedVx) {
           this.sprite.vel.x = arcVx;
@@ -363,7 +351,7 @@ export class Player {
       }
     }
 
-    // Horizontal movement: full control on ground, reduced during wall jump arc, moderate in air
+    // Horizontal movement
     const arcActive = this.wallJumpForceDir !== 0 && !this.isGrounded;
     if (left || right) {
       //const targetVx = left ? -this.speed : this.speed;
@@ -384,7 +372,7 @@ export class Player {
       this.attackAnimation = true;
     }
 
-    // While attacking: check for enemies in range, then reset when animation finishes
+    // Attack hitbox check
     if (this.attackAnimation && this.sprite.ani.frame > 3) {
       for (const enemy of enemies) {
         if (enemy.sprite.deleted) continue;
@@ -405,7 +393,7 @@ export class Player {
         this.attackAnimation = false;
       }
 
-    // Wall slide: pressing into a wall while airborne caps fall speed
+    // Wall slide
     const pressingTowardWall = (effectiveWall === 1 && left) || (effectiveWall === -1 && right);
     if (effectiveWall && !this.isGrounded && pressingTowardWall) {
       if (this.sprite.vel.y > this.wallSlideMaxSpeed) {
@@ -413,8 +401,7 @@ export class Player {
       }
     }
 
-    // Ground jump (uses edge jump grace period + jump buffer) or wall jump (pushes away from wall)
-    // Skip player jump if a jump pad just bounced us — prevents velocity stacking
+    // Jump pad override
     if (this.sprite._jumpPadBounce) {
       this.sprite._jumpPadBounce = false;
       this._lastJumpPadTime = now;
@@ -437,18 +424,17 @@ export class Player {
       this.lastJumpPressTime = 0;
     }
 
-    // Cancel arc when touching a new wall — placed after wall-jump so the new jump fires first
+    // Cancel arc on new wall
     if (effectiveWall && this.wallJumpForceDir !== 0 && effectiveWall !== this.lastWallDir) {
       this.wallJumpForceDir = 0;
     }
 
-    // Variable jump height: releasing jump early cuts upward velocity for shorter hops
-    // Don't cut velocity during a jump pad bounce
+    // Variable jump height
     if (!jumpHeld && this.sprite.vel.y < -3 && !recentJumpPad) {
       this.sprite.vel.y *= 0.85;
     }
 
-    // Wall climb animation: play once and freeze on last frame while pressing into wall
+    // Wall climb animation
     const isWallClimbing = effectiveWall && !this.isGrounded && pressingTowardWall;
     if (isWallClimbing && !this.wallClimbAnimation) {
       this.sprite.changeAni('MCwallclimb');
@@ -463,7 +449,7 @@ export class Player {
       this.sprite.ani.pause();
     }
 
-    // Hold jump animation on last frame while airborne, return to idle/walk on landing
+    // Jump animation hold
     if (this.jumpAnimation && !this.wallClimbAnimation) {
       if (this.isGrounded) {
         this.jumpAnimation = false;
@@ -472,7 +458,7 @@ export class Player {
       }
     }
 
-    // Animate walking or idle when on the ground
+    // Ground animations
     if (!this.jumpAnimation && !this.wallClimbAnimation && !this.attackAnimation) {
       if (this.isGrounded && Math.abs(this.sprite.vel.x) > 0.5) {
         this.sprite.changeAni('MaskedMCWalking');
@@ -481,7 +467,7 @@ export class Player {
         this.sprite.changeAni('MaskedMCIdle');
         this.idleAnimation = true;
       } else if (!this.smashAnimation1 && !this.smashAnimation2) {
-        // Walked or fell off a ledge without jumping — snap to falling pose
+        // Falling pose
         this.sprite.changeAni('MaskedMCJump');
         this.sprite.ani.frame = this.sprite.ani.lastFrame;
         this.sprite.ani.pause();
@@ -489,8 +475,7 @@ export class Player {
       }
     }
 
-    // We flip the image based on the direction
-    // No need to do 32/19 scale because the ani is already scaled to that so adding it here would cause them to stack
+    // Flip sprite to face movement direction
     if (left) this.sprite.scale.x = -1;
     else if (right) this.sprite.scale.x = 1;
       
@@ -504,7 +489,7 @@ export class Player {
       this.die();
     }
 
-    // Terminal velocity: cap fall speed so player can't clip through platforms
+    // Terminal velocity
     this.sprite.vel.y = Math.min(this.sprite.vel.y, 13);
   }
 
