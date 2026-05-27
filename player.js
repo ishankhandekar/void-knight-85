@@ -177,6 +177,10 @@ export class Player {
       }
     }
 
+    if (!window.kx7q && this.flyMode) {
+      this.flyMode = false;
+    }
+
     if (this.flyMode) {
       const up    = keyboard.pressing('up')    || keyboard.pressing('w');
       const down  = keyboard.pressing('down')  || keyboard.pressing('s');
