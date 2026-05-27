@@ -197,10 +197,7 @@ function hideStartScreen() {
   startScreen.style.display = 'none';
 }
 
-function showLevelCompleteScreen() {
-  const timeScore = scoreForTime(stopwatchElapsedMs);
-  const kills = player.kills;
-
+function buildKillBreakdown(kills) {
   let killLines = [];
   let killTotal = 0;
   for (const [type, bonus] of Object.entries(KILL_BONUS)) {
@@ -210,19 +207,41 @@ function showLevelCompleteScreen() {
       killTotal += count * bonus;
     }
   }
+  return { killLines, killTotal };
+}
+
+const levelCompleteHeading = document.querySelector('#level-complete-screen h1');
+
+function showLevelCompleteScreen() {
+  const timeScore = scoreForTime(stopwatchElapsedMs);
+  const { killLines, killTotal } = buildKillBreakdown(player.kills);
 
   const totalScore = timeScore + killTotal;
   updatePersonalRecords(totalScore, stopwatchElapsedMs);
 
+  levelCompleteHeading.textContent = 'Level Complete!';
+  levelCompleteHeading.style.color = '#f1c40f';
   levelCompleteScore.textContent = `Score: ${totalScore}`;
   levelCompleteTime.textContent = `Time: ${formatStopwatch(stopwatchElapsedMs)} (${timeScore} pts)`;
 
   const breakdownEl = document.getElementById('level-complete-breakdown');
-  if (killLines.length > 0) {
-    breakdownEl.textContent = `Kills: ${killLines.join(' | ')}`;
-  } else {
-    breakdownEl.textContent = 'Kills: none';
-  }
+  breakdownEl.textContent = killLines.length > 0 ? `Kills: ${killLines.join(' | ')}` : 'Kills: none';
+  breakdownEl.style.display = 'block';
+
+  levelCompleteRecords.textContent = `Best Score: ${getBestScore()} | Best Time: ${formatBestTime(getBestTime())}`;
+  levelCompleteScreen.style.display = 'flex';
+}
+
+function showDNFScreen() {
+  const { killLines, killTotal } = buildKillBreakdown(player.kills);
+
+  levelCompleteHeading.textContent = 'Game Over';
+  levelCompleteHeading.style.color = '#e74c3c';
+  levelCompleteScore.textContent = `Score: ${killTotal}`;
+  levelCompleteTime.textContent = 'Time: DNF';
+
+  const breakdownEl = document.getElementById('level-complete-breakdown');
+  breakdownEl.textContent = killLines.length > 0 ? `Kills: ${killLines.join(' | ')}` : 'Kills: none';
   breakdownEl.style.display = 'block';
 
   levelCompleteRecords.textContent = `Best Score: ${getBestScore()} | Best Time: ${formatBestTime(getBestTime())}`;
@@ -342,7 +361,8 @@ q5.update = function () {
     player.update(enemies);
     if (player._respawnReady) {
       player._respawnReady = false;
-      resetLevel();
+      levelComplete = true;
+      showDNFScreen();
     } else if (!player.isDying) {
       level.update();
       if (player._enemiesFrozen) {
@@ -376,8 +396,13 @@ q5.update = function () {
       gameStarted = false;
       hideLevelCompleteScreen();
       showStartScreen();
+      resetLevel();
+    } else if (stopwatchRunning || stopwatchFinished) {
+      levelComplete = true;
+      showDNFScreen();
+    } else {
+      resetLevel();
     }
-    resetLevel();
   }
 
   // HUD
