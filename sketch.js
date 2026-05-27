@@ -156,7 +156,8 @@ const KILL_BONUS = { mage: 50, bat: 25, slug: 10 };
 function scoreForTime(milliseconds) {
   const seconds = milliseconds / 1000;
 
-  if (seconds < 45)       return 1000;
+  if (seconds < 40)       return 1000;
+  else if (seconds < 50)  return 700;
   else if (seconds < 60)  return 500;
   else if (seconds < 90)  return 400;
   else if (seconds < 120) return 200;
