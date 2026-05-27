@@ -1,6 +1,7 @@
 import { Player } from './player.js';
 import { Slug } from './slug.js';
 import { Mage } from './mage.js';
+import { Bat } from './bat.js';
 import { buildLevel } from './level.js';
 
 let bgImage;
@@ -88,6 +89,8 @@ const enemies = [
   new Mage(680, 308, 680, 680, level.platforms),
   new Mage(240, 108, 240, 240, level.platforms),
   new Mage(680, -92, 680, 680, level.platforms),
+  new Bat(120, -260, 40, level.platforms),
+  new Bat(520, -220, 0, level.platforms),
 ];
 
 // Use q5play's overlap system (same as spikes/jump pads) so physics separation
@@ -320,7 +323,7 @@ q5.update = function () {
         player._enemiesFrozen = false;
       }
       for (const enemy of enemies) {
-        if (enemy instanceof Mage) enemy.update(player);
+        if (enemy instanceof Mage || enemy instanceof Bat) enemy.update(player);
         else enemy.update();
       }
     } else if (!player._enemiesFrozen) {

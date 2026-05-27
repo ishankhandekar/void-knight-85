@@ -91,12 +91,15 @@ export function buildLevel(canvasHeight) {
     return s;
   }
 
-  function honey(x, y, w = 80, h = 12) {
+  function honey(x, y, w = BLOCK_SIZE, h = 12) {
     const sl = new honeyGroup.Sprite(x, y, w, h);
     sl.physics = STATIC;
-    sl.color = '#f6b93b'; 
-    sl.stroke = '#bd7600'; 
+    sl.color = '#f6b93b';
+    sl.stroke = '#bd7600';
     sl.strokeWeight = 2;
+    sl.img = 'Sprites/textures/honeytexture.png';
+    sl.img.scale.x = w / 32;
+    sl.img.scale.y = h / 10;
     return sl;
   }
 
@@ -133,19 +136,21 @@ export function buildLevel(canvasHeight) {
   const START_ROW = 620;
   const PLAYER_SIZE = 32;
   const BARRIER_GAP = PLAYER_SIZE * 2;
-  const spawnPlatformLength = 4;
+  const spawnPlatformLength = 3;
+  const middlePlatformLength = 4;
 
   blockLine(-680, START_ROW, spawnPlatformLength, "right"); // spawn floor
-  blockLine(-560, START_ROW - BLOCK_SIZE, 14, "up"); // right spawn wall
+  blockLine(-560, START_ROW, 15, "up"); // right spawn wall
   blockLine(-560, -260, 6, "down", "wall"); // ceiling wall
   blockLine(-360, -260, 12, "down", "wall"); // tall ceiling wall
   blockLine(-360, 660, 9, "up", "wall"); // bottom wall below tall ceiling wall
-  blockLine(-320, 340, spawnPlatformLength, "right"); // jump pad platform
+  blockLine(-320, 340, middlePlatformLength, "right"); // jump pad platform
   blockLine(-160, -260, 6, "down", "wall"); // top wall above slime platform wall
   blockLine(-160, 660, 15, "up", "wall"); // bottom wall against slime platform
   blockLine(40, 660, 20, "up", "wall"); // bottom wall against slime moving platform
   blockLine(200, -260, 22, "down", "wall"); // top wall right of slime moving platform
-  spike(120, 672, 80, 16);
+  spike(100, 674, 40, 12);
+  spike(140, 674, 40, 12);
   blockLine(520, -175, 5, "right"); // door platform
   ///blockLine(400, -140, 5, "down", "wall"); // top wall above right upper wall
   ///blockLine(400, 180, 5, "down", "wall"); // upper wall above right support
@@ -164,6 +169,9 @@ export function buildLevel(canvasHeight) {
   blocks(400, -100);
   blocks(600, -60);
 
+  spike(440, 674, 40, 12);
+  honey(480, 674);
+
   // Wall-mounted mage perches
   blocks(240, 500);
   blocks(680, 340);
@@ -174,8 +182,8 @@ export function buildLevel(canvasHeight) {
 
   const movingPlatformX = -520;
   const movingPlatformStartY = 596;
-  const movingPlatformWidth = spawnPlatformLength * BLOCK_SIZE;
-  const movingPlatform = blockLine(movingPlatformX, movingPlatformStartY, spawnPlatformLength, "right");
+  const movingPlatformWidth = middlePlatformLength * BLOCK_SIZE;
+  const movingPlatform = blockLine(movingPlatformX, movingPlatformStartY, middlePlatformLength, "right");
   const movingPlatformTopY = -300 + BLOCK_SIZE / 2 + BARRIER_GAP + BLOCK_SIZE / 2;
   const movingPlatformBottomY = 700 - BLOCK_SIZE / 2 - BARRIER_GAP - BLOCK_SIZE / 2;
   const movingPlatformSlug = {
@@ -187,7 +195,7 @@ export function buildLevel(canvasHeight) {
 
   const secondMovingPlatformX = -120;
   const secondMovingPlatformStartY = 60;
-  const secondMovingPlatform = blockLine(secondMovingPlatformX, secondMovingPlatformStartY, spawnPlatformLength, "right");
+  const secondMovingPlatform = blockLine(secondMovingPlatformX, secondMovingPlatformStartY, middlePlatformLength, "right");
   const secondMovingPlatformSlug = {
     x: secondMovingPlatformX + movingPlatformWidth / 2 - BLOCK_SIZE / 2,
     y: secondMovingPlatformStartY - BLOCK_SIZE / 2 - 12,
