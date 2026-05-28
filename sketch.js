@@ -13,6 +13,7 @@ let stopwatchElapsedMs = 0;
 let stopwatchRunning = false;
 let stopwatchFinished = false;
 let runsCompleted = 0;
+let playerName = '';
 let bgMusic;
 
 await Canvas();
@@ -118,12 +119,63 @@ const levelCompleteScreen = document.getElementById('level-complete-screen');
 const levelCompleteScore = document.getElementById('level-complete-score');
 const levelCompleteTime = document.getElementById('level-complete-time');
 const levelCompleteRecords = document.getElementById('level-complete-records');
+const nameScreen = document.getElementById('name-screen');
+const nameInput = document.getElementById('name-input');
+const nameScreenPrompt = document.getElementById('name-screen-prompt');
+const leaderboardScreen = document.getElementById('leaderboard-screen');
+const leaderboardEntries = document.getElementById('leaderboard-entries');
+const leaderboardEmpty = document.getElementById('leaderboard-empty');
+const leaderboardBack = document.getElementById('leaderboard-back');
+const LEADERBOARD_KEY = 'voidKnightLeaderboard';
 const BEST_SCORE_KEY = 'retroRewindBestScore';
 const BEST_TIME_KEY = 'retroRewindBestTime';
 
 bgMusic = new Audio('music/Three Red Hearts - Box Jump.ogg');
 bgMusic.loop = true;
 bgMusic.volume = 0.3;
+
+function showNameScreen() {
+  hideStartScreen();
+  hideInfoScreen();
+  hideLeaderboard();
+  nameScreen.style.display = 'flex';
+  nameInput.value = '';
+  nameInput.focus();
+}
+
+function hideNameScreen() {
+  nameScreen.style.display = 'none';
+}
+
+function startGame() {
+  const name = nameInput.value.trim();
+  if (!name) {
+    nameScreenPrompt.textContent = '> NAME CANNOT BE EMPTY <';
+    nameInput.focus();
+    return;
+  }
+  playerName = name;
+  gameStarted = true;
+  hideNameScreen();
+  resetLevel();
+  bgMusic.currentTime = 0;
+  bgMusic.play();
+}
+
+function confirmName() {
+  nameScreenPrompt.textContent = '> PRESS ENTER TO CONFIRM <';
+}
+
+nameInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') {
+    startGame();
+  } else if (e.key === 'Escape') {
+    hideNameScreen();
+    showStartScreen();
+  } else {
+    confirmName();
+  }
+});
 
 showStartScreen();
 
@@ -214,6 +266,61 @@ function hideStartScreen() {
   startScreen.style.display = 'none';
 }
 
+function getLeaderboard() {
+  try {
+    const raw = localStorage.getItem(LEADERBOARD_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch { return []; }
+}
+
+function addLeaderboardEntry(name, score, time) {
+  const entries = getLeaderboard();
+  entries.push({ name, score, time });
+  entries.sort((a, b) => b.score - a.score || a.time - b.time);
+  if (entries.length > 100) entries.length = 100;
+  localStorage.setItem(LEADERBOARD_KEY, JSON.stringify(entries));
+}
+
+function renderLeaderboard() {
+  const entries = getLeaderboard();
+  leaderboardEntries.innerHTML = '';
+  if (entries.length === 0) {
+    leaderboardEmpty.style.display = 'block';
+    return;
+  }
+  leaderboardEmpty.style.display = 'none';
+  for (let i = 0; i < entries.length; i++) {
+    const e = entries[i];
+    const div = document.createElement('div');
+    div.className = 'lb-entry' + (i < 3 ? ' lb-top' : '');
+    div.innerHTML = `
+      <span class="lb-rank">${i + 1}.</span>
+      <span class="lb-name">${e.name || '???'}</span>
+      <span class="lb-score">${e.score}</span>
+      <span class="lb-time">${formatStopwatch(e.time)}</span>
+    `;
+    leaderboardEntries.appendChild(div);
+  }
+}
+
+function showLeaderboard() {
+  hideInfoScreen();
+  leaderboardScreen.style.display = 'flex';
+  renderLeaderboard();
+}
+
+function hideLeaderboard() {
+  leaderboardScreen.style.display = 'none';
+}
+
+function toggleLeaderboard() {
+  if (leaderboardScreen.style.display === 'flex') {
+    hideLeaderboard();
+  } else {
+    showLeaderboard();
+  }
+}
+
 function buildKillBreakdown(kills) {
   let killLines = [];
   let killTotal = 0;
@@ -237,6 +344,7 @@ function showLevelCompleteScreen() {
 
   const totalScore = timeScore + killTotal;
   updatePersonalRecords(totalScore, stopwatchElapsedMs);
+  addLeaderboardEntry(playerName, totalScore, stopwatchElapsedMs);
 
   levelCompleteHeading.textContent = 'Level Complete!';
   levelCompleteHeading.style.color = '#f1c40f';
@@ -255,6 +363,7 @@ function showDNFScreen() {
   bgMusic.pause();
   runsCompleted++;
   const { killLines, killTotal } = buildKillBreakdown(player.kills);
+  addLeaderboardEntry(playerName, killTotal, stopwatchElapsedMs);
 
   levelCompleteHeading.textContent = 'Game Over';
   levelCompleteHeading.style.color = '#e74c3c';
@@ -276,6 +385,7 @@ function hideLevelCompleteScreen() {
 const infoScreen = document.getElementById('info-screen');
 
 function toggleInfoScreen() {
+  hideLeaderboard();
   infoScreen.style.display = infoScreen.style.display === 'flex' ? 'none' : 'flex';
 }
 
@@ -330,17 +440,24 @@ q5.update = function () {
     allSprites.debug = debugMode;
   }
 
-  if (!gameStarted && keyboard.presses('enter')) {
-    gameStarted = true;
-    hideStartScreen();
-    hideInfoScreen();
-    resetLevel();
-    bgMusic.currentTime = 0;
-    bgMusic.play();
+  if (!gameStarted) {
+    if (nameScreen.style.display === 'flex') {
+      if (keyboard.presses('escape')) {
+        hideNameScreen();
+        showStartScreen();
+      }
+    } else {
+      if (keyboard.presses('enter')) {
+        hideInfoScreen();
+        hideLeaderboard();
+        showNameScreen();
+      }
+    }
   }
 
-  if (!gameStarted && keyboard.presses('i')) {
-    toggleInfoScreen();
+  if (!gameStarted && !(nameScreen.style.display === 'flex')) {
+    if (keyboard.presses('i')) toggleInfoScreen();
+    if (keyboard.presses('l')) toggleLeaderboard();
   }
 
   if (gameStarted && !levelComplete && !stopwatchRunning && !stopwatchFinished && stopwatchStartPressed()) {
