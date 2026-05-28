@@ -12,6 +12,8 @@ let stopwatchStartTime = null;
 let stopwatchElapsedMs = 0;
 let stopwatchRunning = false;
 let stopwatchFinished = false;
+let runsCompleted = 0;
+let bgMusic;
 
 await Canvas();
 displayMode(NORMAL, PIXELATED);
@@ -22,7 +24,7 @@ await loadImage('Images/crystal_cave_background_by_fellfeline_dektmf0-fullview-1
 world.gravity.y = 20;
 
 const level = buildLevel(height);
-const player = new Player(level.spawnX, level.spawnY, level.platforms);
+const player = new Player(level.spawnX, level.spawnY, level.platforms, () => { bgMusic.pause(); });
 
 // Start camera on the player
 camera.x = level.spawnX + 10;
@@ -109,12 +111,21 @@ const PARALLAX_X = 0.05;
 const PARALLAX_Y = 0.03;
 const stopwatchElement = document.getElementById('stopwatch');
 const startScreen = document.getElementById('start-screen');
+const startBestScoreEl = document.getElementById('start-best-score');
+const startBestTimeEl = document.getElementById('start-best-time');
+const startTimeEl = document.getElementById('start-time');
 const levelCompleteScreen = document.getElementById('level-complete-screen');
 const levelCompleteScore = document.getElementById('level-complete-score');
 const levelCompleteTime = document.getElementById('level-complete-time');
 const levelCompleteRecords = document.getElementById('level-complete-records');
 const BEST_SCORE_KEY = 'retroRewindBestScore';
 const BEST_TIME_KEY = 'retroRewindBestTime';
+
+bgMusic = new Audio('music/Three Red Hearts - Box Jump.ogg');
+bgMusic.loop = true;
+bgMusic.volume = 0.3;
+
+showStartScreen();
 
 function formatStopwatch(milliseconds) {
   const totalCentiseconds = Math.floor(milliseconds / 10);
@@ -192,6 +203,11 @@ function formatBestTime(time) {
 
 function showStartScreen() {
   startScreen.style.display = 'flex';
+  startBestScoreEl.innerHTML = `Best Score: <span>${getBestScore()}</span>`;
+  startBestTimeEl.innerHTML = `Best Time: <span>${formatBestTime(getBestTime())}</span>`;
+  startTimeEl.textContent = runsCompleted > 0
+    ? `Last Time: ${formatStopwatch(stopwatchElapsedMs)}`
+    : 'Last Time: --:--.--';
 }
 
 function hideStartScreen() {
@@ -214,6 +230,8 @@ function buildKillBreakdown(kills) {
 const levelCompleteHeading = document.querySelector('#level-complete-screen h1');
 
 function showLevelCompleteScreen() {
+  bgMusic.pause();
+  runsCompleted++;
   const timeScore = scoreForTime(stopwatchElapsedMs);
   const { killLines, killTotal } = buildKillBreakdown(player.kills);
 
@@ -234,6 +252,8 @@ function showLevelCompleteScreen() {
 }
 
 function showDNFScreen() {
+  bgMusic.pause();
+  runsCompleted++;
   const { killLines, killTotal } = buildKillBreakdown(player.kills);
 
   levelCompleteHeading.textContent = 'Game Over';
@@ -315,6 +335,8 @@ q5.update = function () {
     hideStartScreen();
     hideInfoScreen();
     resetLevel();
+    bgMusic.currentTime = 0;
+    bgMusic.play();
   }
 
   if (!gameStarted && keyboard.presses('i')) {

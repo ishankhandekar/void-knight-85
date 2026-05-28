@@ -1,5 +1,5 @@
 export class Player {
-  constructor(x, y, groundGroup) {
+  constructor(x, y, groundGroup, onDeath) {
     this.sprite = new Sprite(x, y, 32, 32, 'd');
     this.sprite.rotationLock = true;
     this.sprite.friction = 0;
@@ -78,6 +78,21 @@ export class Player {
     // Kill tracking
     this.kills = { slug: 0, mage: 0, bat: 0 };
 
+    // Sound effects
+    this.sfx = {
+      death: new Audio('music/death.mp3'),
+      downSlash: new Audio('music/downSlash.mp3'),
+      jump: new Audio('music/jump.mp3'),
+      attack: new Audio('music/attack.mp3'),
+    };
+    this.sfx.jump.volume = 0.5;
+    this.sfx.death.volume = 0.8;
+    this.sfx.downSlash.volume = 0.8;
+    this.sfx.attack.volume = 0.8;
+
+    // Death callback (stops bg music)
+    this._onDeath = onDeath || (() => {});
+
     // Back-reference for collision callbacks
     this.sprite._player = this;
   }
@@ -123,6 +138,9 @@ export class Player {
     if (this.isDying) return;
     this.isDying = true;
     this._deathFalling = true;
+    this._onDeath();
+    this.sfx.death.currentTime = 0;
+    this.sfx.death.play();
 
     this.sprite.vel.x = 0;
     this.sprite.physics = DYNAMIC;
@@ -136,6 +154,9 @@ export class Player {
     if (this.isDying) return;
     this.isDying = true;
     this._deathFalling = false;
+    this._onDeath();
+    this.sfx.death.currentTime = 0;
+    this.sfx.death.play();
 
     this.sprite.vel.x = 0;
     this.sprite.vel.y = 0;
@@ -317,6 +338,8 @@ export class Player {
 
     if (smash && this.jumpAnimation && !this.smashAnimation1 && !this.smashAnimation2) {
       if (this.sprite.ani.frame == this.sprite.ani.lastFrame) {
+        this.sfx.downSlash.currentTime = 0;
+        this.sfx.downSlash.play();
         this.sprite.changeAni('MaskedMCSmashPart1');
         this.smashAnimation1 = true;
         this.sprite.ani.frame = 0;
@@ -379,6 +402,8 @@ export class Player {
 
     // Attack
     if (attack && !this.attackAnimation) {
+      this.sfx.attack.currentTime = 0;
+      this.sfx.attack.play();
       this.sprite.changeAni('MCattackani');
       this.sprite.ani.frame = 0;
       this.sprite.ani.loop = false;
@@ -427,6 +452,8 @@ export class Player {
     const recentJumpPad = (now - (this._lastJumpPadTime || 0)) < 300;
 
     if (effectiveWall && !this.isGrounded && jumpBufferOk) {
+      this.sfx.jump.currentTime = 0;
+      this.sfx.jump.play();
       this.sprite.vel.y = - currentWallJumpPower;
       this.sprite.vel.x = effectiveWall * this.wallJumpPeakVx;
       this.wallJumpForceDir = effectiveWall;
@@ -434,6 +461,8 @@ export class Player {
       this.lastWallDir = effectiveWall;
       this.lastJumpPressTime = 0;
     } else if (!recentJumpPad && (this.isGrounded || edgeJumpAllowed) && jumpBufferOk) {
+      this.sfx.jump.currentTime = 0;
+      this.sfx.jump.play();
       this.sprite.vel.y = - currentJumpPower;
       this.lastGroundedTime = 0;
       this.lastJumpPressTime = 0;

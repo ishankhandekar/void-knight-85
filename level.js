@@ -1,3 +1,6 @@
+const slimeBlockJumpSfx = new Audio('music/slimeBlockJump.mp3');
+slimeBlockJumpSfx.volume = 0.5;
+
 export function buildLevel(canvasHeight) {
   const platformGroup = new Group();
   const honeyGroup = new Group();
@@ -288,6 +291,8 @@ export function buildLevel(canvasHeight) {
     if (!isPlayerTarget(sprite)) return;
 
     if (sprite.vel.y >= -2) {
+      slimeBlockJumpSfx.currentTime = 0;
+      slimeBlockJumpSfx.play();
       sprite.vel.y = -15;
       sprite._jumpPadBounce = true;
       pad.anis.slimetextureani.frame = 0;
