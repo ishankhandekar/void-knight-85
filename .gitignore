@@ -3,9 +3,7 @@ package-lock.json
 bun.lock
 .vscode
 
-# Personal Firebase config — public client keys, but kept out of this shared public repo.
-# Copy firebase-config.example.js to firebase-config.js to set up a checkout.
-firebase-config.js
+# Local Firebase CLI project alias (firebase deploy reads it) — not needed by the deployed game.
 .firebaserc
 
 # Local tooling / scratch — never push these
