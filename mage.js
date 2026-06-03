@@ -1,5 +1,9 @@
 import { Enemy } from './enemy.js';
 
+// Hard cap on fireball lifetime (frames) — a backstop so a projectile can never
+// linger forever if its 400px range / platform-collision despawn is ever missed.
+const FIREBALL_MAX_AGE = 240;
+
 export class Mage extends Enemy {
     constructor(x, y, patrolLeft, patrolRight, groundGroup) {
         super(x, y, patrolLeft, patrolRight, groundGroup);
@@ -113,6 +117,30 @@ export class Mage extends Enemy {
         this._initFireballPool();
     }
 
+    // Death: void implosion — swell, then collapse inward with a ring of motes.
+    _startDeath() {
+        this._dur = 18;
+        // Dispel in-flight fireballs so none hang frozen when the caster falls.
+        for (let i = this.fireballs.length - 1; i >= 0; i--) {
+            const fb = this.fireballs[i];
+            if (!fb.deleted && !fb._inPool) this._returnFireball(fb);
+        }
+        this.fireballs = [];
+        // Void pull: a ring of purple motes collapsing toward the center.
+        this._spawnParticles({ count: 8, color: '#b06bd6', speed: 1.7, life: 18, size: 4, inward: true, radius: 20 });
+    }
+
+    _stepDeath(t) {
+        const e = Math.min(1, t / this._dur);
+        let s;
+        if (e < 0.25) s = 1 + (e / 0.25) * 0.4;            // swell 1 -> 1.4
+        else s = 1.4 * (1 - (e - 0.25) / 0.75);            // implode 1.4 -> 0
+        this.sprite.scale.x = this._faceSign * s;
+        this.sprite.scale.y = s;
+        this._setOpacity(e < 0.25 ? 1 : 1 - (e - 0.25) / 0.75);
+        return t >= this._dur;
+    }
+
     canSeePlayer(playerSprite) {
         const dx = playerSprite.x - this.sprite.x;
         const dy = playerSprite.y - this.sprite.y;
@@ -154,6 +182,12 @@ export class Mage extends Enemy {
         for (let i = this.fireballs.length - 1; i >= 0; i--) {
             const fb = this.fireballs[i];
             if (fb.deleted) {
+                this.fireballs.splice(i, 1);
+                continue;
+            }
+
+            if ((fb._age || 0) > FIREBALL_MAX_AGE) {
+                this._returnFireball(fb);
                 this.fireballs.splice(i, 1);
                 continue;
             }
@@ -220,7 +254,7 @@ export class Mage extends Enemy {
                         const tooClose = (fdx * fdx + fdy * fdy) < this.fireballArmDistance * this.fireballArmDistance;
                         const smashing = player.smashAnimation2 && player.sprite.ani.frame >= player.sprite.ani.lastFrame;
                         if (player.isDying || player.flyMode || fireball._inPool || tooClose || smashing) return;
-                        player.die();
+                        player.dieInstant();
                         this._returnFireball(fireball);
                         const idx = this.fireballs.indexOf(fireball);
                         if (idx !== -1) this.fireballs.splice(idx, 1);

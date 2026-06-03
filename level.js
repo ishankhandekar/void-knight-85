@@ -1,5 +1,7 @@
+import { registerSfx } from './prefs.js';
+
 const slimeBlockJumpSfx = new Audio('music/slimeBlockJump.mp3');
-slimeBlockJumpSfx.volume = 0.5;
+registerSfx(slimeBlockJumpSfx, 0.5);
 
 export function buildLevel(canvasHeight) {
   const platformGroup = new Group();
@@ -250,7 +252,9 @@ export function buildLevel(canvasHeight) {
       platform.vel.y = secondVelocity;
     }
 
-    updateHazardAnimations();
+    // Hazard animations are advanced once per frame by sketch.js's
+    // activeLevel.updateSpikes() call. Don't tick them here too, or they
+    // double-advance in the unfrozen case. (Kept in sync with customlevel.js.)
   }
 
   // Door

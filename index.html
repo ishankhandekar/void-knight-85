@@ -4,11 +4,11 @@
 <head>
 	<meta charset="UTF-8" />
 	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-	<link rel="icon" href="favicon.png">
+	<link rel="icon" type="image/png" href="favicon.png?v=2">
 	<link rel="preconnect" href="https://fonts.googleapis.com">
 	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 	<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
-	<title>VOID KNIGHT</title>
+	<title>Void Knight</title>
 	<style>
 		html,
 		body {
@@ -21,7 +21,7 @@
 
 		#debug-hud {
 			position: fixed;
-			top: 10px;
+			top: 44px;
 			right: 10px;
 			display: flex;
 			flex-direction: column;
@@ -35,8 +35,8 @@
 
 		#stopwatch {
 			position: fixed;
-			top: 10px;
-			left: 10px;
+			top: clamp(8px, 1.5vmin, 16px);
+			left: clamp(8px, 1.5vmin, 16px);
 			padding: 4px 10px;
 			background: rgba(0, 0, 0, 0.65);
 			color: #f1c40f;
@@ -133,6 +133,29 @@
 
 		#start-screen {
 			display: flex;
+			gap: 12px;
+			background:
+				linear-gradient(rgba(6, 16, 12, 0.45), rgba(0, 0, 0, 0.8)),
+				url('Images/emerald_cave_bg.png') center / cover no-repeat;
+			image-rendering: pixelated;
+		}
+
+		#start-knight {
+			width: 160px;
+			height: 160px;
+			background: url('Sprites/MaskedMCIdle.png') 0 0 / 320px 320px no-repeat;
+			image-rendering: pixelated;
+			filter: drop-shadow(0 0 14px rgba(241, 196, 15, 0.65));
+			animation: knight-idle 0.9s steps(1) infinite, knight-bob 2.6s ease-in-out infinite;
+		}
+		@keyframes knight-idle {
+			0%   { background-position: 0 0; }
+			33%  { background-position: -160px 0; }
+			66%  { background-position: 0 -160px; }
+		}
+		@keyframes knight-bob {
+			0%, 100% { transform: translateY(0); }
+			50%      { transform: translateY(-10px); }
 		}
 
 		#level-complete-screen {
@@ -205,18 +228,137 @@
 			font-size: 14px;
 		}
 
+		/* Primary CTA: the PLAY prompt. Large boxed action that pulses (scale + glow). */
 		#start-prompt {
-			font-size: 12px;
-			animation: blink 1.2s step-end infinite;
-			margin-top: 8px;
-			color: #f1c40f;
+			font-size: 15px;
+			animation: vk-cta-pulse 1.6s ease-in-out infinite;
+			margin-top: 4px;
+			padding: 12px 24px;
+			color: #1a1a1a;
+			background: rgba(241, 196, 15, 0.92);
+			border: 2px solid #f1c40f;
+			border-radius: 4px;
 			letter-spacing: 1px;
+			text-align: center;
+			box-shadow: 0 0 18px rgba(241, 196, 15, 0.7);
+			pointer-events: auto;
+			cursor: pointer;
+			will-change: transform;
+			transition: box-shadow 0.12s ease, transform 0.1s ease;
+		}
+		/* Smooth size + glow pulse, always visible (replaces the old on/off blink). */
+		@keyframes vk-cta-pulse {
+			0%, 100% { transform: scale(1);    box-shadow: 0 0 16px rgba(241, 196, 15, 0.55); }
+			50%      { transform: scale(1.05); box-shadow: 0 0 30px rgba(241, 196, 15, 0.95); }
+		}
+		/* Hover/active drive the transform, so pause the pulse while interacting. */
+		#start-prompt:hover {
+			animation: none;
+			transform: translateY(-2px) scale(1.08);
+			box-shadow: 0 0 30px rgba(241, 196, 15, 0.98);
+			color: #1a1a1a;
+			text-shadow: none;
+		}
+		#start-prompt:active { animation: none; transform: scale(0.98); }
+		@media (prefers-reduced-motion: reduce) {
+			#start-prompt { animation: none; }
 		}
 
+		/* Secondary options: tidy centered vertical stack, one per line. */
 		#start-info-hint {
+			display: flex;
+			flex-direction: column;
+			align-items: stretch;
+			justify-content: center;
+			gap: 8px;
+			margin-top: 6px;
+			width: 240px;
+			max-width: 80vw;
+		}
+		#start-info-hint .menu-btn {
+			width: 100%;
+			text-align: center;
+		}
+
+		/* Compact account chip: just the username + caret in the top-right; the
+		   sign-in/out menu drops down on click. */
+		#start-account {
+			position: absolute;
+			top: clamp(10px, 2vmin, 18px);
+			right: clamp(10px, 2vmin, 18px);
+			display: flex;
+			flex-direction: column;
+			align-items: flex-end;
+			gap: 6px;
+			pointer-events: auto;
+			z-index: 20;
+		}
+		#account-chip {
+			display: inline-flex;
+			align-items: center;
+			gap: 6px;
+			max-width: 260px;
+			font-family: 'Press Start 2P', monospace;
 			font-size: 9px;
-			color: #7f8c8d;
 			letter-spacing: 1px;
+			color: #f1c40f;
+			background: rgba(0, 0, 0, 0.5);
+			border: 2px solid rgba(241, 196, 15, 0.45);
+			border-radius: 4px;
+			padding: 7px 9px;
+			cursor: pointer;
+			pointer-events: auto;
+			transition: background 0.12s ease, box-shadow 0.12s ease, color 0.12s ease;
+		}
+		#account-chip:hover {
+			background: rgba(241, 196, 15, 0.85);
+			color: #1a1a1a;
+			box-shadow: 0 0 12px rgba(241, 196, 15, 0.6);
+		}
+		#account-name {
+			overflow: hidden;
+			text-overflow: ellipsis;
+			white-space: nowrap;
+			max-width: 200px;
+		}
+		#account-chip .account-caret { font-size: 8px; opacity: 0.85; line-height: 1; }
+		#account-menu {
+			display: flex;
+			flex-direction: column;
+			align-items: stretch;
+			gap: 6px;
+			padding: 6px;
+			background: rgba(0, 0, 0, 0.85);
+			border: 2px solid rgba(241, 196, 15, 0.4);
+			border-radius: 4px;
+		}
+		#account-menu[hidden] { display: none; }
+		#account-menu .menu-btn { font-size: 8px; padding: 8px 10px; white-space: nowrap; }
+		.menu-btn {
+			font-family: 'Press Start 2P', monospace;
+			font-size: 9px;
+			letter-spacing: 1px;
+			color: #f1c40f;
+			background: rgba(241, 196, 15, 0.08);
+			border: 2px solid rgba(241, 196, 15, 0.55);
+			border-radius: 4px;
+			padding: 10px 12px;
+			cursor: pointer;
+			pointer-events: auto;
+			transition: background 0.12s ease, box-shadow 0.12s ease, transform 0.1s ease, color 0.12s ease;
+		}
+		.menu-btn:hover {
+			background: rgba(241, 196, 15, 0.85);
+			color: #1a1a1a;
+			box-shadow: 0 0 16px rgba(241, 196, 15, 0.8);
+			transform: translateY(-2px) scale(1.05);
+		}
+		.menu-btn:active { transform: translateY(0) scale(0.95); }
+		/* Back buttons reuse the .menu-btn look; override the legacy id styling. */
+		#info-back, #leaderboard-back, #settings-close, #customize-back, #auth-back {
+			font-size: 9px;
+			color: #f1c40f;
+			margin-top: 16px;
 		}
 
 		#name-screen {
@@ -230,7 +372,7 @@
 			background: #000000;
 			color: #ecf0f1;
 			font-family: 'Press Start 2P', monospace;
-			pointer-events: none;
+			pointer-events: auto;   /* onboarding modal must capture clicks so the username field can focus */
 			z-index: 220;
 		}
 		#name-screen h1 {
@@ -247,6 +389,10 @@
 			text-shadow: 0 0 8px #f1c40f;
 			margin-bottom: -4px;
 		}
+		/* Form fields must capture clicks even inside pointer-events:none overlay screens
+		   (auth email/password, username, map title, comments) — otherwise the click falls
+		   through to the game canvas behind and the field never focuses. */
+		input, textarea, select { pointer-events: auto; }
 		#name-input {
 			font-family: 'Press Start 2P', monospace;
 			font-size: 16px;
@@ -373,6 +519,582 @@
 			background: rgba(0, 0, 0, 0.6);
 			color: #ff9800;
 		}
+
+		#settings-btn {
+			position: fixed;
+			bottom: clamp(8px, 1.5vmin, 16px);
+			left: clamp(8px, 1.5vmin, 16px);
+			z-index: 300;
+			width: 34px;
+			height: 34px;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			font-size: 24px;
+			line-height: 1;
+			color: #f1c40f;
+			background: none;
+			border: none;
+			cursor: pointer;
+			pointer-events: auto;
+			user-select: none;
+			transition: transform 0.15s ease;
+			font-family: 'Segoe UI Symbol', 'Apple Symbols', system-ui, sans-serif;
+		}
+		#settings-btn:hover { text-shadow: 0 0 8px rgba(241, 196, 15, 0.9); transform: rotate(40deg); }
+		#settings-btn.active { text-shadow: 0 0 10px #f1c40f; }
+
+		#settings-screen {
+			display: none;
+			position: fixed;
+			inset: 0;
+			z-index: 230;
+			flex-direction: column;
+			align-items: center;
+			justify-content: flex-start;
+			gap: 14px;
+			padding: 40px 20px;
+			overflow-y: auto;
+			background: rgba(0, 0, 0, 0.95);
+			color: #ecf0f1;
+			font-family: 'Press Start 2P', monospace;
+			pointer-events: auto;
+		}
+		#settings-screen h1 {
+			margin: 0;
+			color: #f1c40f;
+			font-size: 22px;
+			text-shadow: 0 0 10px #f1c40f, 0 0 20px #f1c40f;
+			letter-spacing: 3px;
+		}
+		#settings-binds {
+			width: 100%;
+			max-width: 560px;
+			display: flex;
+			flex-direction: column;
+			gap: 12px;
+			margin-top: 6px;
+		}
+		.settings-row {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			gap: 12px;
+			flex-wrap: wrap;
+			border-bottom: 1px solid rgba(241, 196, 15, 0.15);
+			padding-bottom: 10px;
+		}
+		.settings-label {
+			font-size: 11px;
+			color: #ecf0f1;
+			min-width: 130px;
+		}
+		.settings-chips {
+			display: flex;
+			flex-wrap: wrap;
+			gap: 6px;
+			align-items: center;
+			justify-content: flex-end;
+			flex: 1;
+		}
+		.settings-chip {
+			display: inline-flex;
+			align-items: center;
+			gap: 6px;
+			font-size: 9px;
+			padding: 5px 8px;
+			background: rgba(241, 196, 15, 0.1);
+			border: 1px solid rgba(241, 196, 15, 0.5);
+			color: #f1c40f;
+			border-radius: 3px;
+		}
+		.settings-chip-x {
+			cursor: pointer;
+			color: #e74c3c;
+			font-size: 12px;
+			line-height: 1;
+		}
+		.settings-chip-x:hover { color: #ff6b5b; }
+		.settings-add {
+			font-size: 9px;
+			padding: 5px 8px;
+			border: 1px dashed rgba(241, 196, 15, 0.6);
+			color: #bdc3c7;
+			border-radius: 3px;
+			cursor: pointer;
+		}
+		.settings-add:hover { color: #f1c40f; border-color: #f1c40f; }
+		.settings-add.capturing { color: #2ecc71; border-color: #2ecc71; border-style: solid; }
+		#settings-reset {
+			font-size: 10px;
+			margin-top: 8px;
+			padding: 8px 12px;
+			border: 1px solid rgba(241, 196, 15, 0.6);
+			color: #f1c40f;
+			border-radius: 3px;
+			cursor: pointer;
+		}
+		#settings-reset:hover { box-shadow: 0 0 10px rgba(241, 196, 15, 0.4); }
+		#settings-close {
+			font-size: 9px;
+			color: #7f8c8d;
+			margin-top: 4px;
+		}
+
+		#fps-counter {
+			position: fixed;
+			top: 44px;
+			left: clamp(8px, 1.5vmin, 16px);
+			z-index: 300;
+			padding: 2px 4px;
+			background: none;
+			border: none;
+			color: #2ecc71;
+			font-family: monospace;
+			font-size: 12px;
+			line-height: 1;
+			text-shadow: 0 0 3px #000, 0 0 3px #000;
+			pointer-events: none;
+			display: none;
+		}
+
+		.settings-section-title {
+			width: 100%;
+			max-width: 560px;
+			text-align: left;
+			color: #f1c40f;
+			font-family: 'Press Start 2P', monospace;
+			font-size: 12px;
+			letter-spacing: 2px;
+			margin-top: 10px;
+			opacity: 0.85;
+		}
+		#settings-display {
+			width: 100%;
+			max-width: 560px;
+			display: flex;
+			flex-direction: column;
+			gap: 12px;
+			margin-top: 4px;
+		}
+		.settings-control {
+			display: flex;
+			align-items: center;
+			justify-content: flex-end;
+			gap: 8px;
+			flex: 1;
+			flex-wrap: wrap;
+		}
+		.settings-value {
+			font-size: 9px;
+			color: #bdc3c7;
+			min-width: 42px;
+			text-align: right;
+		}
+		.gfx-btn, .toggle-btn {
+			font-size: 9px;
+			padding: 5px 10px;
+			border: 1px solid rgba(241, 196, 15, 0.5);
+			color: #bdc3c7;
+			border-radius: 3px;
+			cursor: pointer;
+			user-select: none;
+		}
+		.gfx-btn:hover, .toggle-btn:hover { color: #f1c40f; border-color: #f1c40f; }
+		.gfx-btn.active, .toggle-btn.active {
+			color: #000;
+			background: #f1c40f;
+			border-color: #f1c40f;
+		}
+		#music-slider, #sfx-slider {
+			-webkit-appearance: none;
+			appearance: none;
+			width: 180px;
+			height: 6px;
+			background: rgba(241, 196, 15, 0.25);
+			border-radius: 3px;
+			outline: none;
+			accent-color: #f1c40f;
+		}
+		#music-slider::-webkit-slider-thumb,
+		#sfx-slider::-webkit-slider-thumb {
+			-webkit-appearance: none;
+			appearance: none;
+			width: 14px;
+			height: 14px;
+			background: #f1c40f;
+			border-radius: 2px;
+			cursor: pointer;
+		}
+		#music-slider::-moz-range-thumb,
+		#sfx-slider::-moz-range-thumb {
+			width: 14px;
+			height: 14px;
+			background: #f1c40f;
+			border: none;
+			border-radius: 2px;
+			cursor: pointer;
+		}
+
+		#customize-screen {
+			display: none;
+			position: fixed;
+			inset: 0;
+			z-index: 225;
+			flex-direction: column;
+			align-items: center;
+			justify-content: flex-start;
+			gap: 12px;
+			padding: 30px 20px;
+			overflow-y: auto;
+			background: #05070c;
+			color: #ecf0f1;
+			font-family: 'Press Start 2P', monospace;
+			pointer-events: auto;
+		}
+		#customize-screen h1 {
+			margin: 0;
+			color: #f1c40f;
+			font-size: 22px;
+			text-shadow: 0 0 10px #f1c40f, 0 0 20px #f1c40f;
+			letter-spacing: 3px;
+		}
+		#customize-preview {
+			width: 160px;
+			height: 160px;
+			image-rendering: pixelated;
+			background: #0a0a0a;
+			border: 1px solid rgba(241, 196, 15, 0.5);
+			border-radius: 4px;
+		}
+		#customize-controls {
+			width: 100%;
+			max-width: 520px;
+			display: flex;
+			flex-direction: column;
+			gap: 12px;
+			margin-top: 4px;
+		}
+		.opt-btn {
+			font-size: 9px;
+			padding: 5px 9px;
+			border: 1px solid rgba(241, 196, 15, 0.5);
+			color: #bdc3c7;
+			border-radius: 3px;
+			cursor: pointer;
+			user-select: none;
+		}
+		.opt-btn:hover { color: #f1c40f; border-color: #f1c40f; }
+		.opt-btn.active { color: #000; background: #f1c40f; border-color: #f1c40f; }
+		#body-color, #head-color, #sword-color {
+			-webkit-appearance: none;
+			appearance: none;
+			width: 40px;
+			height: 24px;
+			padding: 0;
+			border: 1px solid rgba(241, 196, 15, 0.6);
+			border-radius: 3px;
+			background: none;
+			cursor: pointer;
+		}
+		#customize-reset {
+			font-size: 10px;
+			margin-top: 8px;
+			padding: 8px 12px;
+			border: 1px solid rgba(241, 196, 15, 0.6);
+			color: #f1c40f;
+			border-radius: 3px;
+			cursor: pointer;
+		}
+		#customize-reset:hover { box-shadow: 0 0 10px rgba(241, 196, 15, 0.4); }
+		#customize-back { font-size: 9px; color: #7f8c8d; margin-top: 4px; }
+
+		#auth-screen {
+			display: none;
+			position: fixed;
+			inset: 0;
+			z-index: 226;
+			flex-direction: column;
+			align-items: center;
+			justify-content: center;
+			gap: 12px;
+			padding: 50px 20px;
+			overflow-y: auto;
+			background: #05070c;
+			color: #ecf0f1;
+			font-family: 'Press Start 2P', monospace;
+			pointer-events: auto;
+		}
+		#auth-screen h1 {
+			margin: 0;
+			color: #f1c40f;
+			font-size: 22px;
+			text-shadow: 0 0 10px #f1c40f, 0 0 20px #f1c40f;
+			letter-spacing: 3px;
+		}
+		.auth-btn {
+			font-size: 11px;
+			padding: 10px 14px;
+			border: 1px solid rgba(241, 196, 15, 0.6);
+			color: #f1c40f;
+			border-radius: 3px;
+			cursor: pointer;
+			user-select: none;
+			text-align: center;
+		}
+		.auth-btn:hover { background: rgba(241, 196, 15, 0.15); }
+		#auth-google { display: flex; align-items: center; justify-content: center; gap: 8px; }
+		.google-g { width: 22px; height: 22px; image-rendering: pixelated; flex: none; }
+		.auth-or { font-size: 9px; color: #7f8c8d; }
+		.auth-input {
+			font-family: 'Press Start 2P', monospace;
+			font-size: 11px;
+			padding: 10px 12px;
+			background: #0a0a0a;
+			color: #f1c40f;
+			border: 2px solid #f1c40f;
+			outline: none;
+			width: 280px;
+			text-align: center;
+		}
+		.auth-row { display: flex; gap: 10px; }
+		#auth-error { font-size: 9px; color: #e74c3c; min-height: 12px; max-width: 320px; text-align: center; line-height: 1.6; }
+		#auth-back { font-size: 9px; color: #7f8c8d; margin-top: 6px; }
+
+		/* While actively playing, hide the cursor entirely. */
+		body.playing, body.playing * { cursor: none !important; }
+		.auth-btn, .opt-btn, .gfx-btn, .toggle-btn, .settings-add, .settings-chip-x,
+		#settings-reset, #customize-reset, #settings-btn, .menu-link,
+		#body-color, #head-color, #sword-color, #music-slider, #sfx-slider, .auth-input {
+			cursor: pointer;
+		}
+		.menu-link { pointer-events: auto; transition: text-shadow 0.12s ease, color 0.12s ease; }
+		.menu-link:hover { color: #f1c40f; text-shadow: 0 0 8px rgba(241, 196, 15, 0.8); }
+
+		/* ===== Feature-pass overlays: pause / map browser / map detail ===== */
+		/* z-index kept in 215-218 so settings (230), auth (226), customize (225) and the gear (300) still win. */
+
+		/* IN-GAME PAUSE — centered overlay (mirrors #settings-screen, centered like #start-screen). */
+		#pause-screen {
+			display: none;
+			position: fixed;
+			inset: 0;
+			z-index: 218;
+			flex-direction: column;
+			align-items: center;
+			justify-content: center;
+			gap: 14px;
+			background: rgba(0, 0, 0, 0.95);
+			color: #ecf0f1;
+			font-family: 'Press Start 2P', monospace;
+			pointer-events: auto;
+		}
+		#pause-screen h1 {
+			margin: 0 0 6px;
+			color: #f1c40f;
+			font-size: 28px;
+			text-shadow: 0 0 10px #f1c40f, 0 0 20px #f1c40f;
+			letter-spacing: 4px;
+		}
+		#pause-screen .menu-btn { min-width: 200px; font-size: 11px; padding: 12px 14px; }
+
+		/* Stars on the level-complete screen (filled with ★ by sketch.js). Large gold
+		   reward badge with extra spacing so it reads as distinct from the score lines.
+		   Collapses entirely when empty (death/DNF screens set textContent = '') so it
+		   leaves no phantom gap under the heading. */
+		#level-complete-stars:empty { display: none; }
+		#level-complete-stars {
+			color: #f1c40f;
+			font-size: 40px;
+			letter-spacing: 8px;
+			line-height: 1;
+			margin: 6px 0 14px;
+			text-shadow: 0 0 12px #f1c40f, 0 0 26px rgba(241, 196, 15, 0.8), 0 0 44px rgba(241, 196, 15, 0.5);
+		}
+
+		/* MAP BROWSER gallery — scrollable overlay cloned from #leaderboard-screen. */
+		#map-browser-screen,
+		#map-detail-screen {
+			display: none;
+			position: fixed;
+			inset: 0;
+			align-items: center;
+			justify-content: flex-start;
+			flex-direction: column;
+			background: rgba(0, 0, 0, 0.95);
+			color: #ecf0f1;
+			font-family: 'Press Start 2P', monospace;
+			padding: 30px 20px;
+			overflow-y: auto;
+			gap: 10px;
+			pointer-events: auto;
+		}
+		#map-browser-screen { z-index: 215; }
+		#map-detail-screen { z-index: 216; }
+		#map-browser-screen h1,
+		#map-detail-screen h1 {
+			margin: 0;
+			color: #f1c40f;
+			font-size: 22px;
+			text-shadow: 0 0 10px #f1c40f, 0 0 20px #f1c40f;
+			text-align: center;
+			max-width: 100%;
+		}
+		/* User-supplied titles can be up to 40 chars in a wide pixel font — wrap them
+		   instead of forcing a horizontal scrollbar across this fixed overlay. */
+		#map-detail-title {
+			max-width: 520px;
+			line-height: 1.4;
+			word-break: break-word;
+			overflow-wrap: anywhere;
+		}
+
+		/* Sort chips host (filled with .toggle-btn chips by mapbrowser.js). */
+		#map-sort {
+			display: flex;
+			gap: 8px;
+			justify-content: center;
+			margin-top: 2px;
+		}
+
+		/* Cards container — same metrics as #leaderboard-entries. */
+		#map-list {
+			width: 100%;
+			max-width: 520px;
+			display: flex;
+			flex-direction: column;
+			gap: 6px;
+			margin-top: 4px;
+		}
+		#map-list-empty {
+			font-size: 11px;
+			color: #7f8c8d;
+			margin-top: 20px;
+		}
+
+		/* Gallery card — built as "lb-entry map-card" by mapbrowser.js. Like .lb-entry but
+		   clickable (pointer-events:auto). Author label (.lb-author) is browser-only. */
+		.map-card {
+			pointer-events: auto;
+			cursor: pointer;
+			align-items: center;
+			border: 1px solid rgba(241, 196, 15, 0.2);
+			border-radius: 3px;
+			transition: background 0.12s ease, box-shadow 0.12s ease, transform 0.1s ease;
+		}
+		.map-card:hover {
+			background: rgba(241, 196, 15, 0.1);
+			box-shadow: 0 0 12px rgba(241, 196, 15, 0.35);
+			transform: translateY(-1px);
+		}
+		/* Title gets priority over author so long names don't crowd it out;
+		   min-width:0 lets both shrink so text-overflow:ellipsis actually engages. */
+		.map-card .lb-name { flex: 2; min-width: 0; }
+		.map-card .lb-author {
+			flex: 1;
+			min-width: 0;
+			text-align: right;
+			padding-right: 8px;
+			color: #bdc3c7;
+			font-size: 9px;
+			overflow: hidden;
+			text-overflow: ellipsis;
+			white-space: nowrap;
+		}
+		/* Like count on a card: gold heart (not the leaderboard's green score color). */
+		.map-card .lb-score {
+			color: #f1c40f;
+			width: auto;
+			flex: none;
+			white-space: nowrap;
+		}
+
+		/* Detail header bits. */
+		#map-detail-author {
+			font-size: 10px;
+			color: #bdc3c7;
+			margin-top: -2px;
+		}
+		#map-detail-actions {
+			display: flex;
+			flex-wrap: wrap;
+			gap: 10px;
+			justify-content: center;
+			margin: 4px 0 2px;
+		}
+		/* Counts live INSIDE the .menu-btn reaction buttons; inherit the button's
+		   text color so they flip to dark-on-gold when .active (gold-on-gold = invisible). */
+		#map-detail-likes,
+		#map-detail-dislikes {
+			margin-left: 4px;
+			color: inherit;
+		}
+		/* Reaction buttons reuse .menu-btn; .active marks the user's current reaction. */
+		.menu-btn.active {
+			background: rgba(241, 196, 15, 0.85);
+			color: #1a1a1a;
+			box-shadow: 0 0 14px rgba(241, 196, 15, 0.8);
+		}
+		/* Disabled write controls (mapbrowser.js sets disabled attr + .disabled class). */
+		.menu-btn:disabled,
+		.menu-btn.disabled,
+		.auth-input:disabled,
+		.auth-input.disabled {
+			opacity: 0.45;
+			cursor: default;
+			pointer-events: none;
+		}
+
+		/* Comments list — lb-entry-ish stacked rows. */
+		#map-comments {
+			width: 100%;
+			max-width: 520px;
+			display: flex;
+			flex-direction: column;
+			gap: 6px;
+			margin-top: 6px;
+		}
+		.map-comment {
+			display: flex;
+			flex-direction: column;
+			gap: 4px;
+			font-size: 9px;
+			padding: 8px 10px;
+			border-bottom: 1px solid rgba(241, 196, 15, 0.15);
+		}
+		.map-comment-author { color: #f1c40f; }
+		.map-comment-when { color: #7f8c8d; font-size: 8px; }
+		.map-comment-text {
+			color: #ecf0f1;
+			line-height: 1.6;
+			word-break: break-word;
+			white-space: pre-wrap;
+		}
+		.map-comment-empty {
+			font-size: 10px;
+			color: #7f8c8d;
+			text-align: center;
+			padding: 10px 0;
+		}
+
+		/* Comment composer (textarea + Post). */
+		#map-comment-composer {
+			width: 100%;
+			max-width: 520px;
+			display: flex;
+			flex-direction: column;
+			align-items: stretch;
+			gap: 8px;
+			margin-top: 4px;
+		}
+		#map-comment-input {
+			width: 100%;
+			box-sizing: border-box;
+			text-align: left;
+			resize: vertical;
+			line-height: 1.6;
+		}
+		#map-comment-composer .menu-btn { align-self: flex-end; }
 	</style>
 </head>
 
@@ -387,6 +1109,28 @@
     } }
   </script>
 	<script type="module" src="https://q5play.org/q5play.js"></script>
+
+	<!-- Boot watchdog: if the q5/q5play engine fails to load (CDN unreachable / offline),
+	     show a clear message instead of a silent blank screen. Classic script so it runs
+	     even when ES-module loading is the thing that failed. Purely additive — it only
+	     reveals an overlay when the engine is absent, never touches the happy path. -->
+	<div id="engine-error" style="display:none; position:fixed; inset:0; z-index:99999; background:#0a0a0a; color:#f4f4f5; font-family:monospace; text-align:center; padding:24px; flex-direction:column; align-items:center; justify-content:center;">
+		<div style="font-size:20px; color:#e74c3c; margin-bottom:12px;">&#9888; Failed to load the game engine</div>
+		<div style="opacity:.8; max-width:420px; line-height:1.5;">Couldn't reach the q5play engine (CDN). Check your internet connection and reload the page.</div>
+	</div>
+	<script>
+		window.addEventListener('load', function () {
+			setTimeout(function () {
+				// q5 creates its OWN <canvas> on successful init, separate from the static
+				// #customize-preview canvas in the markup; a failed/unreachable engine never does.
+				// Excluding the preview is what makes this fire on a real CDN failure (and never on a working game).
+				if (!document.querySelector('canvas:not(#customize-preview)')) {
+					var el = document.getElementById('engine-error');
+					if (el) el.style.display = 'flex';
+				}
+			}, 6000);
+		});
+	</script>
 
 	<!-- OFFLINE LINKS -->
 	<!--
@@ -407,7 +1151,18 @@
 			<div id="hud-debug" class="hud-tag">DEBUG MODE [~]</div>
 		</div>
 		<div id="stopwatch">00:00.00</div>
+		<div id="tutorial-hint" style="position:fixed;top:clamp(8px,1.5vmin,16px);left:50%;transform:translateX(-50%);max-width:90vw;padding:8px 14px;background:rgba(0,0,0,0.72);color:#f1c40f;border:1px solid rgba(241,196,15,0.75);border-radius:3px;font-family:'Press Start 2P',monospace;font-size:11px;line-height:1.5;text-align:center;pointer-events:none;z-index:150;display:none;"></div>
 		<div id="start-screen">
+			<div id="start-account">
+				<button id="account-chip" type="button" aria-haspopup="true" aria-expanded="false">
+					<span id="account-name">Sign In</span>
+					<span class="account-caret" aria-hidden="true">▾</span>
+				</button>
+				<div id="account-menu" role="menu" hidden>
+					<button class="menu-btn" data-menu-action="signout">Sign Out</button>
+				</div>
+			</div>
+			<div id="start-knight"></div>
 			<h1>VOID<br>KNIGHT</h1>
 			<div class="retro-subtitle">~ Ready? ~</div>
 			<div class="retro-divider"></div>
@@ -417,16 +1172,23 @@
 				<div id="start-best-time">Best Time: <span>--:--.--</span></div>
 			</div>
 			<div class="retro-divider"></div>
-			<div id="start-prompt">> PRESS ENTER TO START <</div>
-			<div id="start-info-hint">Press I for Info &middot; Press L for Leaderboard</div>
+			<div id="start-prompt" class="menu-link" data-menu-action="start">> PRESS ENTER TO START <</div>
+			<div id="start-info-hint">
+				<button class="menu-btn" data-menu-action="customize">Customize</button>
+				<button class="menu-btn" data-menu-action="editor">Map Editor</button>
+				<button class="menu-btn" data-menu-action="browse">Browse Maps</button>
+				<button class="menu-btn" data-menu-action="leaderboard">Leaderboard</button>
+				<button class="menu-btn" data-menu-action="settings">Settings</button>
+				<button class="menu-btn" data-menu-action="info">Info</button>
+			</div>
 		</div>
 		<div id="name-screen">
 			<h1>ENTER YOUR NAME</h1>
 			<div class="retro-divider"></div>
 			<div id="name-screen-char">&#x25BA;</div>
-			<input id="name-input" type="text" placeholder="TYPE HERE" maxlength="16" spellcheck="false" autocomplete="off">
+			<input id="name-input" type="text" placeholder="TYPE HERE" maxlength="20" spellcheck="false" autocomplete="off">
 			<div id="name-screen-prompt">> PRESS ENTER TO CONFIRM <</div>
-			<div id="name-screen-hint">Press Escape to go back</div>
+			<div id="name-screen-hint">3&ndash;20 letters &amp; numbers &middot; must be unique</div>
 		</div>
 		<div id="info-screen">
 			<h1>How to Play</h1>
@@ -452,21 +1214,150 @@
 				• Under 1:30 = 400 pts | Under 2 min = 200 pts | 3 min+ = 100 pts<br>
 				• Mage kill = 50 pts | Bat kill = 25 pts | Slug kill = 10 pts
 			</div>
-			<div id="info-back">Press I to go back</div>
+			<button id="info-back" class="menu-btn back-btn">&#8592; Back</button>
 		</div>
 		<div id="leaderboard-screen">
 			<h1>LEADERBOARD</h1>
 			<div id="leaderboard-entries"></div>
 			<div id="leaderboard-empty">No runs yet</div>
-			<div id="leaderboard-back">Press L to go back</div>
+			<button id="leaderboard-back" class="menu-btn back-btn">&#8592; Back</button>
 		</div>
 		<div id="level-complete-screen">
 			<h1>Level Complete!</h1>
+			<div id="level-complete-stars"></div>
 			<div id="level-complete-score">Score: 0</div>
 			<div id="level-complete-time">Time: 00:00.00</div>
 			<div id="level-complete-breakdown" style="display:none; font-size:18px;"></div>
 			<div id="level-complete-records">Best Score: 0 | Best Time: --:--.--</div>
 			<div id="level-complete-restart">Press R to restart</div>
+		</div>
+
+		<div id="fps-counter"></div>
+		<div id="settings-btn" title="Settings">&#9881;</div>
+		<div id="settings-screen">
+			<h1>SETTINGS</h1>
+			<div id="settings-ingame" style="display:none; flex-direction:column; gap:10px; width:100%; align-items:center; margin-bottom:6px;">
+				<button id="settings-resume" class="menu-btn">Resume</button>
+				<button id="settings-restart" class="menu-btn">Restart</button>
+				<button id="settings-quit" class="menu-btn">Quit to Menu</button>
+			</div>
+			<div class="settings-section-title">DISPLAY &amp; AUDIO</div>
+			<div id="settings-display">
+				<div class="settings-row">
+					<div class="settings-label">Graphics</div>
+					<div class="settings-control">
+						<span class="gfx-btn" data-gfx="low">LOW</span>
+						<span class="gfx-btn" data-gfx="medium">MED</span>
+						<span class="gfx-btn" data-gfx="high">HIGH</span>
+					</div>
+				</div>
+				<div class="settings-row">
+					<div class="settings-label">Music</div>
+					<div class="settings-control">
+						<input id="music-slider" type="range" min="0" max="100" step="1">
+						<span id="music-value" class="settings-value">30%</span>
+					</div>
+				</div>
+				<div class="settings-row">
+					<div class="settings-label">Sound FX</div>
+					<div class="settings-control">
+						<input id="sfx-slider" type="range" min="0" max="100" step="1">
+						<span id="sfx-value" class="settings-value">100%</span>
+					</div>
+				</div>
+				<div class="settings-row">
+					<div class="settings-label">Show FPS</div>
+					<div class="settings-control">
+						<span id="fps-toggle" class="toggle-btn">OFF</span>
+					</div>
+				</div>
+			</div>
+			<div class="settings-section-title">CONTROLS</div>
+			<div id="settings-binds"></div>
+			<div id="settings-reset">RESET TO DEFAULTS</div>
+			<button id="settings-close" class="menu-btn back-btn">&#8592; Back</button>
+		</div>
+
+		<div id="auth-screen">
+			<h1>SIGN IN</h1>
+			<input id="auth-email" class="auth-input" type="email" placeholder="EMAIL" autocomplete="username" spellcheck="false">
+			<input id="auth-pass" class="auth-input" type="password" placeholder="PASSWORD" autocomplete="current-password">
+			<div class="auth-row">
+				<span id="auth-signin" class="auth-btn">SIGN IN</span>
+				<span id="auth-signup" class="auth-btn">SIGN UP</span>
+			</div>
+			<div class="auth-or">— or —</div>
+			<div id="auth-google" class="auth-btn"><img class="google-g" src="Images/google_g_pixel.png" alt="">SIGN IN WITH GOOGLE</div>
+			<div id="auth-error"></div>
+			<button id="auth-back" class="menu-btn back-btn">&#8592; Back</button>
+		</div>
+
+		<div id="customize-screen">
+			<h1>CUSTOMIZE</h1>
+			<canvas id="customize-preview" width="160" height="160"></canvas>
+			<div id="customize-controls">
+				<div class="settings-row">
+					<div class="settings-label">Body Color</div>
+					<div class="settings-control">
+						<input id="body-color" type="color">
+						<span id="body-color-val" class="settings-value">#C2BFC6</span>
+					</div>
+				</div>
+				<div class="settings-row">
+					<div class="settings-label">Head Color</div>
+					<div class="settings-control">
+						<input id="head-color" type="color">
+						<span id="head-color-val" class="settings-value">#C2BFC6</span>
+					</div>
+				</div>
+				<div class="settings-row">
+					<div class="settings-label">Sword Color</div>
+					<div class="settings-control">
+						<input id="sword-color" type="color">
+						<span id="sword-color-val" class="settings-value">#C2BFC6</span>
+					</div>
+				</div>
+			</div>
+			<div id="customize-reset">RESET TO DEFAULTS</div>
+			<button id="customize-back" class="menu-btn back-btn">&#8592; Back</button>
+		</div>
+
+		<!-- IN-GAME PAUSE (pauseui.js) -->
+		<div id="pause-screen">
+			<h1>PAUSED</h1>
+			<button id="pause-resume" class="menu-btn">Resume</button>
+			<button id="pause-restart" class="menu-btn">Restart</button>
+			<button id="pause-quit" class="menu-btn">Quit to Menu</button>
+		</div>
+
+		<!-- MAP EDITOR host: the editor module injects its own palette + styles and
+		     forces this div transparent / click-through, so leave it bare (no children, no CSS). -->
+		<div id="map-editor-screen"></div>
+
+		<!-- COMMUNITY MAP BROWSER: gallery (mapbrowser.js) -->
+		<div id="map-browser-screen">
+			<h1>BROWSE MAPS</h1>
+			<div id="map-sort"></div>
+			<div id="map-list"></div>
+			<div id="map-list-empty">No maps yet</div>
+			<button id="map-browser-back" class="menu-btn back-btn">&#8592; Back</button>
+		</div>
+
+		<!-- COMMUNITY MAP BROWSER: single-map detail (mapbrowser.js) -->
+		<div id="map-detail-screen">
+			<h1 id="map-detail-title">Untitled</h1>
+			<div id="map-detail-author"></div>
+			<div id="map-detail-actions">
+				<button id="map-detail-play" class="menu-btn">Play</button>
+				<button id="map-detail-like" class="menu-btn">&#128077; Like <span id="map-detail-likes"></span></button>
+				<button id="map-detail-dislike" class="menu-btn">&#128078; Dislike <span id="map-detail-dislikes"></span></button>
+			</div>
+			<div id="map-comments"></div>
+			<div id="map-comment-composer">
+				<textarea id="map-comment-input" class="auth-input" rows="2" maxlength="500" placeholder="Add a comment&hellip;"></textarea>
+				<button id="map-comment-post" class="menu-btn">Post</button>
+			</div>
+			<button id="map-detail-back" class="menu-btn back-btn">&#8592; Back</button>
 		</div>
 
 		<!-- YOUR SKETCH -->

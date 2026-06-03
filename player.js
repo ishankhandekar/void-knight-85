@@ -1,3 +1,10 @@
+import { actionHeld, actionPressed } from './keybinds.js';
+import { registerSfx } from './prefs.js';
+import { computeRegions, applyRegionColors } from './recolor.js';
+import { customization } from './customization.js';
+import { playSfx } from './audio.js';
+import { shake } from './juice.js';
+
 export class Player {
   constructor(x, y, groundGroup, onDeath) {
     this.sprite = new Sprite(x, y, 32, 32, 'd');
@@ -19,8 +26,8 @@ export class Player {
     this.sprite.anis.MaskedMCJump.frameDelay = 10;
     this.sprite.anis.MaskedMCWalking.frameDelay = 6;
     this.sprite.anis.MCwallclimb.frameDelay = 8;
-    this.sprite.anis.MaskedMCdeath.frameDelay = 5;
-    this.sprite.anis.MCattackani.frameDelay = 4;
+    this.sprite.anis.MaskedMCdeath.frameDelay = 3;
+    this.sprite.anis.MCattackani.frameDelay = 2;
     this.sprite.anis.MaskedMCSmashPart1.frameDelay = 1;
     this.sprite.anis.MaskedMCSmashPart2.frameDelay = 1;
     // Animation scales (stacks with sprite.scale so don't rescale after this)
@@ -63,6 +70,8 @@ export class Player {
     this.lastWallDir = 0;
 
     this.isGrounded = false;
+    this._wasGrounded = false;   // previous-frame grounded state (landing-sound edge detect)
+    this._fallVy = 0;            // downward speed captured just before a landing zeroes vel.y
     this.jumpAnimation = false;
     this.walkAnimation = false;
     this.idleAnimation = true;
@@ -85,16 +94,46 @@ export class Player {
       jump: new Audio('music/jump.mp3'),
       attack: new Audio('music/attack.mp3'),
     };
-    this.sfx.jump.volume = 0.5;
-    this.sfx.death.volume = 0.8;
-    this.sfx.downSlash.volume = 0.8;
-    this.sfx.attack.volume = 0.8;
+    registerSfx(this.sfx.jump, 0.5);
+    registerSfx(this.sfx.death, 0.8);
+    registerSfx(this.sfx.downSlash, 0.8);
+    registerSfx(this.sfx.attack, 0.8);
 
     // Death callback (stops bg music)
     this._onDeath = onDeath || (() => {});
 
     // Back-reference for collision callbacks
     this.sprite._player = this;
+
+    this._skinCache = {};
+  }
+
+  // Recolor the knight's body / head / sword regions in place across all animations, reading the
+  // chosen colors from `customization`. Region maps + pristine pixels are cached per sheet on first
+  // call so recoloring never compounds. Returns true once at least one sheet was loaded (boot retry).
+  applySkin() {
+    const SKIN_ANIS = ['MaskedMCIdle', 'MaskedMCJump', 'MaskedMCWalking', 'MCwallclimb',
+      'MaskedMCdeath', 'MCattackani', 'MaskedMCSmashPart1', 'MaskedMCSmashPart2'];
+    let appliedAny = false;
+    for (const name of SKIN_ANIS) {
+      const ani = this.sprite.anis[name];
+      if (!ani || !ani.spriteSheet) continue;
+      const sheet = ani.spriteSheet;
+      sheet.loadPixels();
+      if (!sheet.pixels || sheet.pixels.length === 0) continue; // not loaded yet
+      let cached = this._skinCache[name];
+      if (!cached) {
+        const orig = sheet.pixels.slice();
+        const frames = [];
+        for (let k = 0; k < ani.length; k++) frames.push(ani[k]);
+        const map = computeRegions(orig, sheet.width, sheet.height, frames);
+        cached = this._skinCache[name] = { orig, map };
+      }
+      applyRegionColors(cached.orig, sheet.pixels, cached.map, sheet.width, customization);
+      sheet.updatePixels();
+      appliedAny = true;
+    }
+    return appliedAny;
   }
 
   reset() {
@@ -203,10 +242,10 @@ export class Player {
     }
 
     if (this.flyMode) {
-      const up    = keyboard.pressing('up')    || keyboard.pressing('w');
-      const down  = keyboard.pressing('down')  || keyboard.pressing('s');
-      const left  = keyboard.pressing('left')  || keyboard.pressing('a');
-      const right = keyboard.pressing('right') || keyboard.pressing('d');
+      const up    = actionHeld('jump');
+      const down  = actionHeld('smash');
+      const left  = actionHeld('left');
+      const right = actionHeld('right');
       const flySpeed = this.speed * 2.5;
       this.sprite.vel.x = right ? flySpeed : left ? -flySpeed : 0;
       this.sprite.vel.y = down  ? flySpeed : up   ? -flySpeed : 0;
@@ -248,8 +287,11 @@ export class Player {
     const now = Date.now();
 
     // Ground and wall detection
+    // Downward speed this frame, before any landing zeroes vel.y (used to pick the landing sound)
+    this._fallVy = this.sprite.vel.y;
     this.isGrounded = false;
     let groundPlatVelY = 0;
+    let landedPlat = null;
     let onWall = 0; // 0 = none, +1 = wall on left, -1 = wall on right
 
     for (const plat of this.groundGroup) {
@@ -260,13 +302,20 @@ export class Player {
 
       const horizontalOverlap = playerRight > platLeft + 1 && playerLeft < platRight - 1;
 
-      // Grounded check (widened for moving platform speed)
-      const platSpeed = Math.abs(plat.vel.y || 0);
+      // Grounded check. The detection window is widened by both the platform's
+      // speed and the player's own downward speed so a fast fall (up to terminal
+      // velocity ~13px/frame) can't step clean across the ~14px window in a single
+      // frame and read as airborne on the touchdown frame.
+      const platVelY = Number.isFinite(plat.vel.y) ? plat.vel.y : 0;
+      const platSpeed = Math.abs(platVelY);
+      const fallSpeed = Math.max(0, this.sprite.vel.y);
       if (!this.isGrounded && horizontalOverlap &&
-          playerBottom >= platTop - 6 - platSpeed && playerBottom <= platTop + 8 + platSpeed &&
+          playerBottom >= platTop - 6 - platSpeed &&
+          playerBottom <= platTop + 8 + platSpeed + fallSpeed &&
           this.sprite.vel.y >= -1 - platSpeed) {
         this.isGrounded = true;
-        groundPlatVelY = plat.vel.y || 0;
+        groundPlatVelY = platVelY;
+        landedPlat = plat;
       }
 
       // Wall detection
@@ -296,6 +345,16 @@ export class Player {
       }
     }
 
+    // Landing sound — fire once on the grounded edge, skip jump-pad bounces (they have their own feel)
+    if (!this._wasGrounded && this.isGrounded && this._fallVy > 4 && !this.sprite._jumpPadBounce) {
+      let landSfx;
+      if (this.sprite._onHoney) landSfx = 'landHoney';
+      else if (this._texturePath(landedPlat).includes('walltexture')) landSfx = 'landWall';
+      else landSfx = 'landStone';
+      playSfx(landSfx);
+      if (this._fallVy > 9) shake(3, 120);   // hard land — punch the camera
+    }
+
     // Edge jump grace
     const edgeJumpAllowed = !this.isGrounded &&
       this.lastGroundedTime > 0 &&
@@ -309,12 +368,12 @@ export class Player {
 
 
     // Input
-    const left  = keyboard.pressing('left')  || keyboard.pressing('a');
-    const right = keyboard.pressing('right') || keyboard.pressing('d');
-    const jumpPressed = keyboard.presses('up') || keyboard.presses('w') || keyboard.presses('space');
-    const jumpHeld    = keyboard.pressing('up') || keyboard.pressing('w') || keyboard.pressing('space');
-    const attack = keyboard.pressing('p')
-    const smash = keyboard.presses('s') || keyboard.presses('down');
+    const left  = actionHeld('left');
+    const right = actionHeld('right');
+    const jumpPressed = actionPressed('jump');
+    const jumpHeld    = actionHeld('jump');
+    const attack = actionHeld('attack');
+    const smash = actionPressed('smash');
 
     const onHoney = this.sprite._onHoney === true;
     this.sprite._onHoney = false;
@@ -362,12 +421,12 @@ export class Player {
       this.sprite.ani.pause();
       this.sprite.vel.y = 15;
       for (const enemy of enemies) {
-        if (enemy.sprite.deleted) continue;
+        if (enemy.sprite.deleted || enemy.isDying) continue;
         const dx = Math.abs(this.sprite.x - enemy.sprite.x);
         const dy = enemy.sprite.y - this.sprite.y;
         if (dx < 28 && dy > 0 && dy < 40) {
           this._recordKill(enemy);
-          enemy.sprite.delete();
+          enemy.die();
         }
       }
     }
@@ -402,8 +461,7 @@ export class Player {
 
     // Attack
     if (attack && !this.attackAnimation) {
-      this.sfx.attack.currentTime = 0;
-      this.sfx.attack.play();
+      playSfx('swordSwing');
       this.sprite.changeAni('MCattackani');
       this.sprite.ani.frame = 0;
       this.sprite.ani.loop = false;
@@ -411,17 +469,17 @@ export class Player {
       this.attackAnimation = true;
     }
 
-    // Attack hitbox check
-    if (this.attackAnimation && this.sprite.ani.frame > 3) {
+    // Attack hitbox check — active for the whole swing so the hit lands the instant you press
+    if (this.attackAnimation) {
       for (const enemy of enemies) {
-        if (enemy.sprite.deleted) continue;
+        if (enemy.sprite.deleted || enemy.isDying) continue;
         const dx = this.sprite.x - enemy.sprite.x;
         const dy = this.sprite.y - enemy.sprite.y;
         if (Math.abs(dy) < 32) {
           if ((this.sprite.scale.x > 0 && dx < 0) || (this.sprite.scale.x < 0 && dx > 0)) {
             if (Math.abs(dx) < 48) {
               this._recordKill(enemy);
-              enemy.sprite.delete();
+              enemy.die();
             }
           }
         }
@@ -537,8 +595,20 @@ export class Player {
       this.die();
     }
 
+    // Remember grounded state for next frame's landing-edge detection
+    this._wasGrounded = this.isGrounded;
+
     // Terminal velocity
     this.sprite.vel.y = Math.min(this.sprite.vel.y, 13);
+  }
+
+  // Best-effort source path for a platform's texture. `plat.img` may be the raw path string
+  // or a q5 Image object (whose source lives on .url / .src / .name), so probe each.
+  _texturePath(plat) {
+    const img = plat && plat.img;
+    if (!img) return '';
+    if (typeof img === 'string') return img;
+    return img.url || img.src || img.name || '';
   }
 
   _followCamera(targetX, targetY, speed) {

@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "void-knight",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["tools/serve_nocache.py", "8000"],
+      "port": 8000
+    }
+  ]
+}

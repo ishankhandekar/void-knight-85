@@ -1,0 +1,86 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Profiles: a signed-in user may read & write ONLY their own profile. Profiles hold usernames,
+    // customization, and onboarding flags, so they are NOT world-readable — an unauthenticated
+    // scraper can't enumerate every player. No game flow reads another user's /users doc (the
+    // leaderboard shows names from its own denormalized docs; map authorship comes from the map doc),
+    // and the anti-spoof rule's get(/users/{uid}) bypasses read rules so it keeps working regardless.
+    // username must be 3-20 letters/numbers; extra fields (customizeDone,
+    // tutorialDone, customization) are allowed as long as username stays valid.
+    match /users/{uid} {
+      allow read: if request.auth != null && request.auth.uid == uid;
+      allow write: if request.auth != null
+        && request.auth.uid == uid
+        && request.resource.data.username is string
+        && request.resource.data.username.size() >= 3
+        && request.resource.data.username.size() <= 20
+        && request.resource.data.username.matches('^[A-Za-z0-9]+$');
+    }
+
+    // Username uniqueness index: docId == lowercased name. Create-only (no updates),
+    // so the first claimer wins; the owner may release their own name.
+    match /usernames/{key} {
+      allow read: if true;
+      allow create: if request.auth != null
+        && request.resource.data.uid == request.auth.uid
+        && key.matches('^[a-z0-9]{3,20}$');
+      allow update: if false;
+      allow delete: if request.auth != null && resource.data.uid == request.auth.uid;
+    }
+
+    // Global leaderboard: one doc per player (docId == uid). Public read; owner-only validated write.
+    // ANTI-SPOOF: the row's username MUST equal the writer's own canonical profile username
+    // (/users/{uid}.username). This is the authoritative guard — a crafted client cannot label its
+    // score with someone else's name. The get() is cheap (same uid as the write) and the profile doc
+    // always exists for any user who has a username (required before a score is ever submitted).
+    match /leaderboard/{uid} {
+      allow read: if true;
+      allow write: if request.auth != null
+        && request.auth.uid == uid
+        && request.resource.data.username is string
+        && request.resource.data.username.size() >= 1
+        && request.resource.data.username.size() <= 20
+        && request.resource.data.score is number
+        && request.resource.data.score >= 0
+        && request.resource.data.timeMs is number
+        && request.resource.data.timeMs >= 0
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && request.resource.data.username
+             == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.username;
+    }
+
+    // Community maps: anyone can read; signed-in users publish their own (validated). Owner-only edit/delete.
+    // Reaction/comment counters on the map doc are denormalized + best-effort; the source of truth is the
+    // /likes, /dislikes, /comments subcollections. We deliberately do NOT open the map doc to non-owner
+    // writes, so the acting user maintains their own subcollection doc and counts are read from there
+    // (getCountFromServer) in the client. Best-effort counter bumps by non-owners simply fail and are ignored.
+    match /maps/{mapId} {
+      allow read: if true;
+      allow create: if request.auth != null
+        && request.resource.data.ownerUid == request.auth.uid
+        && request.resource.data.title is string
+        && request.resource.data.title.size() >= 3
+        && request.resource.data.title.size() <= 40
+        && request.resource.data.data is string
+        && request.resource.data.data.size() <= 200000;
+      allow update, delete: if request.auth != null && resource.data.ownerUid == request.auth.uid;  // owner edits/deletes
+
+      // One like / one dislike per user (docId == uid). Acting user owns their own reaction doc; no updates.
+      match /likes/{uid}    { allow read: if true; allow create, delete: if request.auth != null && request.auth.uid == uid; allow update: if false; }
+      match /dislikes/{uid} { allow read: if true; allow create, delete: if request.auth != null && request.auth.uid == uid; allow update: if false; }
+
+      // Comments: public read; signed-in author creates their own (validated); immutable; author may delete.
+      match /comments/{cid} {
+        allow read: if true;
+        allow create: if request.auth != null && request.resource.data.authorUid == request.auth.uid
+          && request.resource.data.text is string && request.resource.data.text.size() >= 1 && request.resource.data.text.size() <= 500;
+        allow update: if false;
+        allow delete: if request.auth != null && resource.data.authorUid == request.auth.uid;
+      }
+    }
+  }
+}
+// IMPORTANT: these rules are NOT live until deployed. Run `firebase deploy --only firestore:rules`
+// (project void-knight-2026) after changing this file, or map publish/react/comment will be denied.

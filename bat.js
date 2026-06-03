@@ -42,6 +42,22 @@ export class Bat extends Enemy {
         this._applyBatAni();
     }
 
+    // Death: burst into a scatter of dust motes while the bat flutters down.
+    _startDeath() {
+        this._dur = 16;
+        this._spawnParticles({ count: 7, color: '#8e44ad', speed: 2.4, gravity: 0.14, size: 4, life: 18 });
+    }
+
+    _stepDeath(t) {
+        const e = Math.min(1, t / this._dur);
+        const s = 1 - e * 0.8;                 // shrink 1 -> 0.2
+        this.sprite.scale.x = this._faceSign * s;
+        this.sprite.scale.y = s;
+        this.sprite.y = this._y0 + e * 10;     // flutter downward
+        this._setOpacity(1 - e);
+        return t >= this._dur;
+    }
+
     // Raycast to check line of sight
     canSeePlayer(playerSprite) {
         const dx = playerSprite.x - this.sprite.x;
