@@ -1,20 +1,14 @@
 // Grid map editor (CONTRACTS §I). Runs IN the game loop while mode==='editor':
 // sketch calls updateEditor()/drawEditor() each frame and getMap()/open/close around it.
 // Authors a levelschema map on a 40px grid: click to place the selected tool, right-click
-// (or the eraser tool) to remove, WASD / drag to pan. Saves to localStorage; play-tests and
-// publishes by handing the in-memory schema back to sketch via injected callbacks.
+// (or the eraser tool) to remove, WASD / drag to pan. Saves to localStorage; play-tests by
+// handing the in-memory schema back to sketch via an injected callback.
 import { emptyMap, validate, serialize, deserialize, BLOCK } from './levelschema.js';
 // customlevel.js is consumed by sketch (onPlaytest -> buildCustomLevel); the editor only
 // produces the schema, so we deliberately do NOT import/build sprites here.
-// isValidMapTitle is the canonical title validator (MAP_TITLE_RE) shared with the
-// leaderboard/publish path — reuse it so the editor's gate matches what gets stored.
-import { isValidMapTitle } from './leaderboard.js';
 
 const STORAGE_KEY = 'voidKnightMaps';   // { [name]: serializedMapString }
 const ACCENT = '#f1c40f';
-// Firestore rules cap the serialized map at 200000 chars (see firestore.rules / CONTRACTS);
-// a larger payload is silently rejected on publish, so we gate it client-side too.
-const MAX_MAP_BYTES = 200000;
 // Saved-map name cap. Names are localStorage keys AND shown (newline-joined) in the Load
 // prompt; keep them short + single-line so the picker stays readable and the store stays sane.
 const MAX_NAME_LEN = 40;
@@ -105,7 +99,6 @@ let mapName = 'untitled';
 
 let onPlaytest = () => {};
 let onClose = () => {};
-let onPublish = () => {};
 
 // movingPlatform + enemy authoring params (applied on placement).
 const cfg = {
@@ -290,7 +283,6 @@ function buildDom() {
     new:     needBtn('editor-new', 'New', btnRow),
     play:    needBtn('editor-play', 'Play-test', btnRow),
     plats:   needBtn('editor-plats', platsLabel(), btnRow),
-    publish: needBtn('editor-publish', 'Publish', btnRow),
     back:    needBtn('editor-back', '← Back', btnRow),
   };
   buttons.save.onclick = doSave;
@@ -302,7 +294,6 @@ function buildDom() {
     freezePlatforms = !freezePlatforms;
     buttons.plats.textContent = platsLabel();
   };
-  buttons.publish.onclick = doPublish;
   buttons.back.onclick = () => onClose();
 
   return { screen, palette, config, status, buttons, toolBtns, cfgFields };
@@ -935,29 +926,6 @@ function doPlaytest() {
   onPlaytest(getMap(), { freezePlatforms });
 }
 
-// Validate, prompt for a title, then publish.
-function doPublish() {
-  const v = validate(map);
-  if (!v.ok) { setStatus('cannot publish: ' + v.errors[0]); return; }
-  // Size gate: Firestore rules cap the serialized payload at MAX_MAP_BYTES and silently
-  // reject anything larger (the publish call's error is swallowed upstream), so fail fast
-  // here with feedback instead of letting an oversized map vanish on publish.
-  const sized = serialize(map);
-  if (sized.length > MAX_MAP_BYTES) {
-    setStatus(`map too large to publish (${sized.length}/${MAX_MAP_BYTES} chars)`);
-    return;
-  }
-  const title = (window.prompt('Map title (3–40 chars):', mapName === 'untitled' ? '' : mapName) || '').trim();
-  if (!title) return;
-  // Gate on the canonical validator (MAP_TITLE_RE) so the editor's check matches what
-  // publishMap()/Firestore will actually accept — otherwise a title with disallowed
-  // characters passes here, then publish silently rejects it with no feedback. Keep the
-  // length pre-check for a clearer message (the most common failure), then the full RE.
-  if (title.length < 3 || title.length > 40) { setStatus('title must be 3–40 chars'); return; }
-  if (!isValidMapTitle(title)) { setStatus('title: only letters, digits, space, - ! ? . , \''); return; }
-  onPublish(getMap(), title);
-}
-
 // Backfill any missing schema fields so an older/partial saved map is editable.
 function normalize(m) {
   if (!m || typeof m !== 'object') return;
@@ -983,7 +951,6 @@ function resetCamera() {
 export function initEditor(cb = {}) {
   if (cb.onPlaytest) onPlaytest = cb.onPlaytest;
   if (cb.onClose) onClose = cb.onClose;
-  if (cb.onPublish) onPublish = cb.onPublish;
   ensureDom();
   inited = true;
   // Suppress the browser context menu over the canvas so right-click can erase.

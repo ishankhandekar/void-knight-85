@@ -1154,13 +1154,9 @@
 		<div id="tutorial-hint" style="position:fixed;top:clamp(8px,1.5vmin,16px);left:50%;transform:translateX(-50%);max-width:90vw;padding:8px 14px;background:rgba(0,0,0,0.72);color:#f1c40f;border:1px solid rgba(241,196,15,0.75);border-radius:3px;font-family:'Press Start 2P',monospace;font-size:11px;line-height:1.5;text-align:center;pointer-events:none;z-index:150;display:none;"></div>
 		<div id="start-screen">
 			<div id="start-account">
-				<button id="account-chip" type="button" aria-haspopup="true" aria-expanded="false">
-					<span id="account-name">Sign In</span>
-					<span class="account-caret" aria-hidden="true">▾</span>
+				<button id="account-chip" type="button" title="Set your name">
+					<span id="account-name">Set Name</span>
 				</button>
-				<div id="account-menu" role="menu" hidden>
-					<button class="menu-btn" data-menu-action="signout">Sign Out</button>
-				</div>
 			</div>
 			<div id="start-knight"></div>
 			<h1>VOID<br>KNIGHT</h1>
@@ -1176,7 +1172,7 @@
 			<div id="start-info-hint">
 				<button class="menu-btn" data-menu-action="customize">Customize</button>
 				<button class="menu-btn" data-menu-action="editor">Map Editor</button>
-				<button class="menu-btn" data-menu-action="browse">Browse Maps</button>
+				<button class="menu-btn" data-menu-action="browse">My Maps</button>
 				<button class="menu-btn" data-menu-action="leaderboard">Leaderboard</button>
 				<button class="menu-btn" data-menu-action="settings">Settings</button>
 				<button class="menu-btn" data-menu-action="info">Info</button>
@@ -1188,7 +1184,7 @@
 			<div id="name-screen-char">&#x25BA;</div>
 			<input id="name-input" type="text" placeholder="TYPE HERE" maxlength="20" spellcheck="false" autocomplete="off">
 			<div id="name-screen-prompt">> PRESS ENTER TO CONFIRM <</div>
-			<div id="name-screen-hint">3&ndash;20 letters &amp; numbers &middot; must be unique</div>
+			<div id="name-screen-hint">3&ndash;20 letters &amp; numbers</div>
 		</div>
 		<div id="info-screen">
 			<h1>How to Play</h1>
@@ -1278,20 +1274,6 @@
 			<button id="settings-close" class="menu-btn back-btn">&#8592; Back</button>
 		</div>
 
-		<div id="auth-screen">
-			<h1>SIGN IN</h1>
-			<input id="auth-email" class="auth-input" type="email" placeholder="EMAIL" autocomplete="username" spellcheck="false">
-			<input id="auth-pass" class="auth-input" type="password" placeholder="PASSWORD" autocomplete="current-password">
-			<div class="auth-row">
-				<span id="auth-signin" class="auth-btn">SIGN IN</span>
-				<span id="auth-signup" class="auth-btn">SIGN UP</span>
-			</div>
-			<div class="auth-or">— or —</div>
-			<div id="auth-google" class="auth-btn"><img class="google-g" src="Images/google_g_pixel.png" alt="">SIGN IN WITH GOOGLE</div>
-			<div id="auth-error"></div>
-			<button id="auth-back" class="menu-btn back-btn">&#8592; Back</button>
-		</div>
-
 		<div id="customize-screen">
 			<h1>CUSTOMIZE</h1>
 			<canvas id="customize-preview" width="160" height="160"></canvas>
@@ -1334,30 +1316,12 @@
 		     forces this div transparent / click-through, so leave it bare (no children, no CSS). -->
 		<div id="map-editor-screen"></div>
 
-		<!-- COMMUNITY MAP BROWSER: gallery (mapbrowser.js) -->
+		<!-- LOCAL MAP GALLERY: your own saved maps (mapbrowser.js) -->
 		<div id="map-browser-screen">
-			<h1>BROWSE MAPS</h1>
-			<div id="map-sort"></div>
+			<h1>MY MAPS</h1>
 			<div id="map-list"></div>
-			<div id="map-list-empty">No maps yet</div>
+			<div id="map-list-empty">No saved maps yet</div>
 			<button id="map-browser-back" class="menu-btn back-btn">&#8592; Back</button>
-		</div>
-
-		<!-- COMMUNITY MAP BROWSER: single-map detail (mapbrowser.js) -->
-		<div id="map-detail-screen">
-			<h1 id="map-detail-title">Untitled</h1>
-			<div id="map-detail-author"></div>
-			<div id="map-detail-actions">
-				<button id="map-detail-play" class="menu-btn">Play</button>
-				<button id="map-detail-like" class="menu-btn">&#128077; Like <span id="map-detail-likes"></span></button>
-				<button id="map-detail-dislike" class="menu-btn">&#128078; Dislike <span id="map-detail-dislikes"></span></button>
-			</div>
-			<div id="map-comments"></div>
-			<div id="map-comment-composer">
-				<textarea id="map-comment-input" class="auth-input" rows="2" maxlength="500" placeholder="Add a comment&hellip;"></textarea>
-				<button id="map-comment-post" class="menu-btn">Post</button>
-			</div>
-			<button id="map-detail-back" class="menu-btn back-btn">&#8592; Back</button>
 		</div>
 
 		<!-- YOUR SKETCH -->

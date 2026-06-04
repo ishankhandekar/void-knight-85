@@ -8,16 +8,14 @@ import { initSettings, initSettingsInGame, isSettingsOpen, openSettings } from '
 import { prefs, registerMusic, applyGraphics } from './prefs.js';
 import { customization, onCustomizationChange, setBodyColor, setHeadColor, setSwordColor } from './customization.js';
 import { initCustomize, isCustomizeOpen, openCustomize, closeCustomize, setCustomizeContinueMode } from './customizeui.js';
-import { onAuthChange, getUserProfile, claimUsername, isValidUsername, setOnboardingFlag, saveCustomizationToAccount, submitScore, fetchTopScores, publishMap, signOutUser } from './leaderboard.js';
-import { initAuth, openAuth, closeAuth, isAuthOpen, setAuthForced } from './authui.js';
+import { isValidUsername, getProfile, saveProfile } from './localstore.js';
 import { buildTutorialLevel, resetTutorialHints, updateTutorialHints, showTutorialHint, hideTutorialHint } from './tutorial.js';
-import { serialize } from './levelschema.js';
 import { buildCustomLevel } from './customlevel.js';
 import { buildGems, resetGems, clearGems, updateGems, gemsCollected, gemsTotal, computeStars } from './collectibles.js';
 import { updateJuice } from './juice.js';
 import { initPause, openPause, isPauseOpen } from './pauseui.js';
 import { initEditor, openEditor, closeEditor, isEditorOpen, updateEditor, drawEditor } from './mapeditor.js';
-import { initBrowser, openBrowser, closeBrowser, isBrowserOpen, setCurrentUser } from './mapbrowser.js';
+import { initBrowser, openBrowser, closeBrowser, isBrowserOpen } from './mapbrowser.js';
 import { initSwordCursor } from './swordcursor.js';
 
 let bgImage;
@@ -32,9 +30,8 @@ let runsCompleted = 0;
 let playerName = '';
 let bgMusic;
 let skinApplied = false;
-let authUser = null;
 let authUsername = null;
-let onboardingStep = 'auth';   // 'auth' | 'username' | 'customize' | 'tutorial' | 'done'
+let onboardingStep = 'username';   // 'username' | 'customize' | 'tutorial' | 'done'
 let profile = { username: null, customizeDone: false, tutorialDone: false, customization: null };
 let mode = 'menu';             // 'menu' | 'tutorial' | 'play' | 'editor'
 let tutorialWorld = null;
@@ -225,44 +222,36 @@ function startGame() {
   bgMusic.play().catch(() => {});
 }
 
-// The name screen now creates the player's username (saved to their account in Firestore).
-async function confirmUsername() {
+// The name screen creates (or changes) the player's username, saved locally in this browser.
+function confirmUsername() {
   const name = nameInput.value.trim();
   if (!isValidUsername(name)) {
     nameScreenPrompt.textContent = '> 3-20 LETTERS & NUMBERS ONLY <';
     nameInput.focus();
     return;
   }
-  if (!authUser) { refreshOnboarding(); return; }
-  nameScreenPrompt.textContent = '> CHECKING... <';
-  try {
-    await claimUsername(authUser.uid, name);
-    authUsername = name;
-    profile.username = name;
-    updateStartAuthUI();
-    advanceOnboarding();   // -> customize
-  } catch (e) {
-    if (e && e.code === 'taken') nameScreenPrompt.textContent = '> NAME TAKEN — TRY ANOTHER <';
-    else if (e && e.code === 'invalid') nameScreenPrompt.textContent = '> 3-20 LETTERS & NUMBERS ONLY <';
-    else nameScreenPrompt.textContent = '> SAVE FAILED — RETRY <';
-  }
+  authUsername = name;
+  profile.username = name;
+  saveProfile({ username: name });
+  updateStartAuthUI();
+  advanceOnboarding();   // -> customize (first run) or -> done (name change)
+}
+
+// Open the name screen to change an existing username (from the account chip).
+function changeUsername() {
+  showNameScreen();
+  nameScreenPrompt.textContent = '> CHANGE USERNAME <';
+  nameInput.value = authUsername || '';
+  nameInput.focus();
+  nameInput.select();
 }
 
 function updateStartAuthUI() {
-  // Compact chip: show the username (signed in) or "Sign In" (signed out). The
-  // sign-out action lives in a dropdown that the chip toggles (wired below).
+  // Compact chip: shows the local username; clicking it lets the player change their name.
   const nameEl = document.getElementById('account-name');
-  const caret = document.querySelector('#account-chip .account-caret');
   const chip = document.getElementById('account-chip');
-  const menu = document.getElementById('account-menu');
-  if (nameEl) nameEl.textContent = authUser ? (authUsername || 'Account') : 'Sign In';
-  if (caret) caret.style.display = authUser ? '' : 'none';
-  if (chip) {
-    chip.setAttribute('aria-haspopup', authUser ? 'true' : 'false');
-    chip.setAttribute('aria-expanded', 'false');
-    chip.title = authUser ? (authUsername || 'Account') : 'Sign in';
-  }
-  if (menu) menu.hidden = true;   // collapse the dropdown on any auth-state change
+  if (nameEl) nameEl.textContent = authUsername || 'Set Name';
+  if (chip) chip.title = authUsername ? ('Playing as ' + authUsername + ' — click to change') : 'Set your name';
 }
 
 // ENTER on the start screen: sign-in is optional. If signed in without a username yet, pick one
@@ -283,7 +272,9 @@ nameInput.addEventListener('keydown', (e) => {
     e.preventDefault();
     confirmUsername();
   } else if (e.key === 'Escape') {
-    e.preventDefault();   // forced onboarding: the username step can't be skipped
+    e.preventDefault();
+    // First-run onboarding can't be skipped; a later name *change* can be cancelled.
+    if (computeStep() === 'done') { hideNameScreen(); showStartScreen(); }
   } else {
     confirmName();
   }
@@ -396,19 +387,12 @@ function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
 
-async function renderLeaderboard() {
+function renderLeaderboard() {
   leaderboardEntries.innerHTML = '';
-  leaderboardEmpty.textContent = 'Loading…';
-  leaderboardEmpty.style.display = 'block';
-  let rows = [];
-  try {
-    rows = await fetchTopScores(20);
-  } catch (e) {
-    leaderboardEmpty.textContent = 'Failed to load leaderboard';
-    return;
-  }
+  const rows = getLeaderboard().slice(0, 20);   // local personal leaderboard (this browser only)
   if (rows.length === 0) {
     leaderboardEmpty.textContent = 'No runs yet';
+    leaderboardEmpty.style.display = 'block';
     return;
   }
   leaderboardEmpty.style.display = 'none';
@@ -417,9 +401,9 @@ async function renderLeaderboard() {
     div.className = 'lb-entry' + (i < 3 ? ' lb-top' : '');
     div.innerHTML = `
       <span class="lb-rank">${i + 1}.</span>
-      <span class="lb-name">${escapeHtml(e.username || '???')}</span>
+      <span class="lb-name">${escapeHtml(e.name || '???')}</span>
       <span class="lb-score">${e.score}</span>
-      <span class="lb-time">${formatStopwatch(e.timeMs || 0)}</span>
+      <span class="lb-time">${formatStopwatch(e.time || 0)}</span>
     `;
     leaderboardEntries.appendChild(div);
   });
@@ -466,7 +450,7 @@ function showLevelCompleteScreen() {
 
   const totalScore = timeScore + killTotal;
   updatePersonalRecords(totalScore, stopwatchElapsedMs);
-  if (authUser && authUsername) submitScore(authUser.uid, authUsername, totalScore, stopwatchElapsedMs).catch(() => {});
+  if (authUsername) addLeaderboardEntry(authUsername, totalScore, stopwatchElapsedMs);
 
   levelCompleteHeading.textContent = 'Level Complete!';
   levelCompleteHeading.style.color = '#f1c40f';
@@ -493,7 +477,7 @@ function showDNFScreen() {
   bgMusic.pause();
   runsCompleted++;
   const { killLines, killTotal } = buildKillBreakdown(player.kills);
-  if (authUser && authUsername) submitScore(authUser.uid, authUsername, killTotal, stopwatchElapsedMs).catch(() => {});
+  if (authUsername) addLeaderboardEntry(authUsername, killTotal, stopwatchElapsedMs);
 
   levelCompleteHeading.textContent = 'Game Over';
   levelCompleteHeading.style.color = '#e74c3c';
@@ -597,7 +581,7 @@ function drawKnightPreview() {
 }
 
 q5.update = function () {
-  const paused = isSettingsOpen() || isCustomizeOpen() || isAuthOpen() || isPauseOpen() || isEditorOpen() || isBrowserOpen();
+  const paused = isSettingsOpen() || isCustomizeOpen() || isPauseOpen() || isEditorOpen() || isBrowserOpen();
 
   // In the editor, suppress the live game sprites so only the grid/preview shows.
   if (typeof allSprites !== 'undefined') allSprites.autoDraw = (mode !== 'editor');
@@ -629,7 +613,6 @@ q5.update = function () {
     // Customize / re-auth shortcuts only once onboarding is finished.
     if (computeStep() === 'done') {
       if (keyboard.presses('c')) openCustomize();
-      if (keyboard.presses('s')) { hideInfoScreen(); hideLeaderboard(); openAuth(); }
     }
   }
 
@@ -802,7 +785,6 @@ initSettingsInGame({
   onQuit:    () => { quitToMenu(); },
 });
 initCustomize({ onOpen: pauseGame, onClose: () => { resumeGame(); onCustomizeClosed(); } });
-initAuth({ onOpen: pauseGame, onClose: resumeGame });
 initPause({
   onResume:  () => { resumeGame(); },
   onRestart: () => { resumeGame(); resetActiveWorld(); },
@@ -811,9 +793,6 @@ initPause({
 initEditor({
   onPlaytest: (map, opts) => { customReturn = 'editor'; enterCustom(map, opts); },
   onClose:    () => { closeEditor(); mode = 'menu'; showStartScreen(); },
-  onPublish:  (map, title) => {
-    if (authUser && authUsername) publishMap(authUser.uid, authUsername, title, serialize(map)).catch(() => {});
-  },
 });
 initBrowser({
   onPlay:  (mapObj) => { customReturn = 'browse'; enterCustom(mapObj); },
@@ -826,7 +805,6 @@ initSwordCursor();   // custom sword cursor (follows mouse, swings on click, hid
 // The current gate is DERIVED from the account each time, so steps only show while unmet
 // and returning players (even on a new device) skip whatever they've already finished.
 function computeStep() {
-  if (!authUser) return 'auth';
   if (!authUsername) return 'username';
   if (!profile.customizeDone) return 'customize';
   if (!profile.tutorialDone) return 'tutorial';
@@ -835,15 +813,7 @@ function computeStep() {
 
 function showOnboardingStep(step) {
   onboardingStep = step;
-  // Only the auth step shows (and forces) the auth modal; keep overlays consistent.
-  if (step !== 'auth' && isAuthOpen()) closeAuth();
-  setAuthForced(step === 'auth');
-
-  if (step === 'auth') {
-    hideNameScreen();
-    if (isCustomizeOpen()) closeCustomize();
-    if (!isAuthOpen()) openAuth();
-  } else if (step === 'username') {
+  if (step === 'username') {
     showNameScreen();
     nameScreenPrompt.textContent = '> CHOOSE A USERNAME <';
   } else if (step === 'customize') {
@@ -878,11 +848,11 @@ function applyAccountColors(c) {
 
 // Finishing the Customize step: persist colors + flag to the account, then advance.
 function onCustomizeClosed() {
-  if (!gameStarted && authUser && authUsername && !profile.customizeDone && onboardingStep === 'customize') {
+  if (!gameStarted && authUsername && !profile.customizeDone && onboardingStep === 'customize') {
     profile.customizeDone = true;
     const colors = { bodyColor: customization.bodyColor, headColor: customization.headColor, swordColor: customization.swordColor };
-    saveCustomizationToAccount(authUser.uid, colors).catch(() => {});
-    setOnboardingFlag(authUser.uid, 'customizeDone', true).catch(() => {});
+    profile.customization = colors;
+    saveProfile({ customizeDone: true, customization: colors });
     advanceOnboarding();   // -> tutorial
   }
 }
@@ -919,7 +889,7 @@ function finishTutorial() {
   gameStarted = false;
   levelComplete = false;
   profile.tutorialDone = true;
-  if (authUser) setOnboardingFlag(authUser.uid, 'tutorialDone', true).catch(() => {});
+  saveProfile({ tutorialDone: true });
   advanceOnboarding();   // -> done -> start screen
 }
 
@@ -1037,32 +1007,14 @@ function quitToMenu() {
   showStartScreen();
 }
 
-// Track Firebase auth state and (re)drive the onboarding gate on every change.
-onAuthChange(async (user) => {
-  authUser = user;
-  authUsername = null;
-  if (user) {
-    try {
-      const p = await getUserProfile(user.uid);
-      p._uid = user.uid;
-      profile = p;
-    } catch (e) {
-      // Transient profile-fetch failure (e.g. a token-refresh auth event during a network blip):
-      // keep the last-known profile for THIS user instead of wiping it and bouncing an already-
-      // onboarded player back to the username screen. Only reset if we have no profile for this uid.
-      if (!profile || profile._uid !== user.uid) {
-        profile = { username: null, customizeDone: false, tutorialDone: false, customization: null };
-      }
-    }
-    authUsername = profile.username;
-    applyAccountColors(profile.customization);
-  } else {
-    profile = { username: null, customizeDone: false, tutorialDone: false, customization: null };
-  }
+// Load the local profile once at startup and drive the onboarding gate.
+(function initLocalProfile() {
+  profile = getProfile();
+  authUsername = profile.username || null;
+  applyAccountColors(profile.customization);
   updateStartAuthUI();
-  setCurrentUser(user ? user.uid : null, authUsername);   // gallery write actions (like/comment)
   refreshOnboarding();
-});
+})();
 
 
 
@@ -1073,8 +1025,7 @@ const MENU_ACTIONS = {
   info:        () => { if (!gameStarted) toggleInfoScreen(); },
   leaderboard: () => { if (!gameStarted) toggleLeaderboard(); },
   customize:   () => { if (!gameStarted && computeStep() === 'done') openCustomize(); },
-  signin:      () => { if (!gameStarted && computeStep() === 'done') { hideInfoScreen(); hideLeaderboard(); openAuth(); } },
-  signout:     () => { if (!gameStarted) signOutUser().catch(() => {}); },
+  changename:  () => { if (!gameStarted && computeStep() === 'done') { hideInfoScreen(); hideLeaderboard(); changeUsername(); } },
   editor:      () => { if (!gameStarted && computeStep() === 'done') openEditorMode(); },
   browse:      () => { if (!gameStarted && computeStep() === 'done') { hideInfoScreen(); hideLeaderboard(); openBrowser(); } },
 };
@@ -1085,24 +1036,16 @@ for (const el of document.querySelectorAll('[data-menu-action]')) {
   });
 }
 
-// Account chip: a compact username button that toggles a sign-out dropdown when
-// signed in, and opens sign-in directly when signed out.
+// Account chip: a compact button showing the local username. Clicking it lets the
+// player change their name (once past first-run onboarding).
 (() => {
   const chip = document.getElementById('account-chip');
-  const menu = document.getElementById('account-menu');
-  const wrap = document.getElementById('start-account');
-  if (!chip || !menu) return;
-  const close = () => { menu.hidden = true; chip.setAttribute('aria-expanded', 'false'); };
+  if (!chip) return;
   chip.addEventListener('click', (e) => {
     e.stopPropagation();
-    if (!authUser) { MENU_ACTIONS.signin(); return; }   // signed out -> open sign-in
-    const show = menu.hidden;
-    menu.hidden = !show;
-    chip.setAttribute('aria-expanded', String(show));
-  });
-  menu.addEventListener('click', close);                 // picking an action closes the menu
-  document.addEventListener('click', (e) => {            // click-away closes the menu
-    if (!menu.hidden && wrap && !wrap.contains(e.target)) close();
+    if (gameStarted) return;
+    if (computeStep() !== 'done') { refreshOnboarding(); return; }
+    changeUsername();
   });
 })();
 
