@@ -1,0 +1,37 @@
+{
+  "version": 1,
+  "title": "First Steps",
+  "spawn": { "col": 1, "row": 9 },
+  "door": { "col": 15, "row": 9 },
+  "blocks": [
+    { "col": 0, "row": 10, "texture": "platform" },
+    { "col": 1, "row": 10, "texture": "platform" },
+    { "col": 2, "row": 10, "texture": "platform" },
+    { "col": 3, "row": 10, "texture": "platform" },
+    { "col": 4, "row": 10, "texture": "platform" },
+    { "col": 5, "row": 10, "texture": "platform" },
+    { "col": 6, "row": 10, "texture": "platform" },
+    { "col": 7, "row": 10, "texture": "platform" },
+    { "col": 8, "row": 10, "texture": "platform" },
+    { "col": 9, "row": 10, "texture": "platform" },
+    { "col": 10, "row": 10, "texture": "platform" },
+    { "col": 11, "row": 10, "texture": "platform" },
+    { "col": 12, "row": 10, "texture": "platform" },
+    { "col": 13, "row": 10, "texture": "platform" },
+    { "col": 14, "row": 10, "texture": "platform" },
+    { "col": 15, "row": 10, "texture": "platform" },
+    { "col": 16, "row": 10, "texture": "platform" },
+    { "col": 0, "row": 9, "texture": "wall" },
+    { "col": 16, "row": 9, "texture": "wall" }
+  ],
+  "hazards": { "spikes": [], "honey": [], "jumpPads": [] },
+  "movingPlatforms": [],
+  "gems": [
+    { "col": 4, "row": 9 },
+    { "col": 8, "row": 9 },
+    { "col": 12, "row": 9 }
+  ],
+  "enemies": [
+    { "type": "slug", "col": 10, "row": 9, "patrolLeft": 9, "patrolRight": 13 }
+  ]
+}

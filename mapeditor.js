@@ -282,6 +282,7 @@ function buildDom() {
     load:    needBtn('editor-load', 'Load', btnRow),
     new:     needBtn('editor-new', 'New', btnRow),
     play:    needBtn('editor-play', 'Play-test', btnRow),
+    export:  needBtn('editor-export', 'Export', btnRow),
     plats:   needBtn('editor-plats', platsLabel(), btnRow),
     back:    needBtn('editor-back', '← Back', btnRow),
   };
@@ -289,6 +290,7 @@ function buildDom() {
   buttons.load.onclick = doLoad;
   buttons.new.onclick = doNew;
   buttons.play.onclick = doPlaytest;
+  buttons.export.onclick = doExport;
   buttons.plats.textContent = platsLabel();   // sync if button pre-existed
   buttons.plats.onclick = () => {
     freezePlatforms = !freezePlatforms;
@@ -872,6 +874,32 @@ function writeStore(obj) {
 // is a sane single-line localStorage key that can't corrupt the newline-joined Load picker.
 function sanitizeName(s) {
   return String(s).replace(/\s+/g, ' ').trim().slice(0, MAX_NAME_LEN);
+}
+
+// Export the current level as a downloadable .json (the schema + a `title` field) so it can be
+// dropped into the repo's levels/ folder and listed in the built-in Levels menu. Validation is
+// enforced first, same bar as play-test, so you can't export a half-finished level.
+function doExport() {
+  const v = validate(map);
+  if (!v.ok) { setStatus('cannot export: ' + (v.errors[0] || 'level invalid')); return; }
+  const title = (window.prompt('Export level — title shown in the Levels menu:', mapName) || '').trim();
+  if (!title) { setStatus('export cancelled'); return; }
+  const slug = (title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')) || 'level';
+  try {
+    const data = JSON.stringify({ ...getMap(), title });
+    const blob = new Blob([data], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = slug + '.json';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    setStatus(`exported ${slug}.json — drop it in levels/ and add it to manifest.json`);
+  } catch (e) {
+    setStatus('export failed');
+  }
 }
 
 function doSave() {

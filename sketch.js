@@ -16,6 +16,7 @@ import { updateJuice } from './juice.js';
 import { initPause, openPause, isPauseOpen } from './pauseui.js';
 import { initEditor, openEditor, closeEditor, isEditorOpen, updateEditor, drawEditor } from './mapeditor.js';
 import { initBrowser, openBrowser, closeBrowser, isBrowserOpen } from './mapbrowser.js';
+import { initLevels, openLevels, closeLevels, isLevelsOpen } from './levelsui.js';
 import { initSwordCursor } from './swordcursor.js';
 
 let bgImage;
@@ -42,7 +43,7 @@ let platformsFrozen = false;   // custom playtest: freeze moving platforms? (tog
 let customEnemies = [];
 let customMap = null;          // the schema currently loaded into a custom play
 let playingCustom = false;
-let customReturn = 'menu';     // where R/Quit goes after a custom play: 'editor' | 'browse' | 'menu'
+let customReturn = 'menu';     // where R/Quit goes after a custom play: 'editor' | 'browse' | 'levels' | 'menu'
 let parMs = 60000;             // par time used for the star rating of the active world
 
 await Canvas();
@@ -581,7 +582,7 @@ function drawKnightPreview() {
 }
 
 q5.update = function () {
-  const paused = isSettingsOpen() || isCustomizeOpen() || isPauseOpen() || isEditorOpen() || isBrowserOpen();
+  const paused = isSettingsOpen() || isCustomizeOpen() || isPauseOpen() || isEditorOpen() || isBrowserOpen() || isLevelsOpen();
 
   // In the editor, suppress the live game sprites so only the grid/preview shows.
   if (typeof allSprites !== 'undefined') allSprites.autoDraw = (mode !== 'editor');
@@ -798,6 +799,10 @@ initBrowser({
   onPlay:  (mapObj) => { customReturn = 'browse'; enterCustom(mapObj); },
   onClose: () => { showStartScreen(); },
 });
+initLevels({
+  onPlay:  (mapObj) => { customReturn = 'levels'; enterCustom(mapObj); },
+  onClose: () => { showStartScreen(); },
+});
 initSwordCursor();   // custom sword cursor (follows mouse, swings on click, hidden during active play)
 
 // --- Forced first-run onboarding: login -> username -> customize -> tutorial -> level 1 ---
@@ -941,6 +946,7 @@ function enterCustom(map, opts = {}) {
   parMs = 60000;
   if (isEditorOpen()) closeEditor();
   if (isBrowserOpen()) closeBrowser();
+  if (isLevelsOpen()) closeLevels();
   hideStartScreen(); hideNameScreen(); hideInfoScreen(); hideLeaderboard(); hideLevelCompleteScreen();
   resetActiveWorld();
   bgMusic.currentTime = 0; bgMusic.play().catch(() => {});
@@ -964,7 +970,8 @@ function showCustomComplete(won) {
   }
   const breakdownEl = document.getElementById('level-complete-breakdown');
   breakdownEl.textContent = customReturn === 'editor' ? 'Press R to return to the editor'
-    : customReturn === 'browse' ? 'Press R to return to the gallery' : 'Press R for the menu';
+    : customReturn === 'browse' ? 'Press R to return to the gallery'
+    : customReturn === 'levels' ? 'Press R for the levels menu' : 'Press R for the menu';
   breakdownEl.style.display = 'block';
   levelCompleteRecords.textContent = '';
   levelCompleteRecords.style.display = 'none';
@@ -991,6 +998,10 @@ function exitCustom() {
     mode = 'menu';
     showStartScreen();
     openBrowser();
+  } else if (back === 'levels') {
+    mode = 'menu';
+    showStartScreen();
+    openLevels();
   } else {
     mode = 'menu';
     showStartScreen();
@@ -1028,6 +1039,7 @@ const MENU_ACTIONS = {
   changename:  () => { if (!gameStarted && computeStep() === 'done') { hideInfoScreen(); hideLeaderboard(); changeUsername(); } },
   editor:      () => { if (!gameStarted && computeStep() === 'done') openEditorMode(); },
   browse:      () => { if (!gameStarted && computeStep() === 'done') { hideInfoScreen(); hideLeaderboard(); openBrowser(); } },
+  levels:      () => { if (!gameStarted && computeStep() === 'done') { hideInfoScreen(); hideLeaderboard(); openLevels(); } },
 };
 for (const el of document.querySelectorAll('[data-menu-action]')) {
   el.addEventListener('click', () => {

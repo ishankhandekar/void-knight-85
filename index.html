@@ -914,7 +914,8 @@
 
 		/* MAP BROWSER gallery — scrollable overlay cloned from #leaderboard-screen. */
 		#map-browser-screen,
-		#map-detail-screen {
+		#map-detail-screen,
+		#levels-screen {
 			display: none;
 			position: fixed;
 			inset: 0;
@@ -931,8 +932,10 @@
 		}
 		#map-browser-screen { z-index: 215; }
 		#map-detail-screen { z-index: 216; }
+		#levels-screen { z-index: 215; }
 		#map-browser-screen h1,
-		#map-detail-screen h1 {
+		#map-detail-screen h1,
+		#levels-screen h1 {
 			margin: 0;
 			color: #f1c40f;
 			font-size: 22px;
@@ -958,7 +961,8 @@
 		}
 
 		/* Cards container — same metrics as #leaderboard-entries. */
-		#map-list {
+		#map-list,
+		#level-list {
 			width: 100%;
 			max-width: 520px;
 			display: flex;
@@ -966,7 +970,8 @@
 			gap: 6px;
 			margin-top: 4px;
 		}
-		#map-list-empty {
+		#map-list-empty,
+		#level-list-empty {
 			font-size: 11px;
 			color: #7f8c8d;
 			margin-top: 20px;
@@ -1170,6 +1175,7 @@
 			<div class="retro-divider"></div>
 			<div id="start-prompt" class="menu-link" data-menu-action="start">> PRESS ENTER TO START <</div>
 			<div id="start-info-hint">
+				<button class="menu-btn" data-menu-action="levels">Levels</button>
 				<button class="menu-btn" data-menu-action="customize">Customize</button>
 				<button class="menu-btn" data-menu-action="editor">Map Editor</button>
 				<button class="menu-btn" data-menu-action="browse">My Maps</button>
@@ -1322,6 +1328,14 @@
 			<div id="map-list"></div>
 			<div id="map-list-empty">No saved maps yet</div>
 			<button id="map-browser-back" class="menu-btn back-btn">&#8592; Back</button>
+		</div>
+
+		<!-- BUILT-IN LEVELS: hand-made levels shipped in the repo's levels/ folder (levelsui.js) -->
+		<div id="levels-screen">
+			<h1>LEVELS</h1>
+			<div id="level-list"></div>
+			<div id="level-list-empty">No levels yet</div>
+			<button id="levels-back" class="menu-btn back-btn">&#8592; Back</button>
 		</div>
 
 		<!-- YOUR SKETCH -->

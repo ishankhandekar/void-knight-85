@@ -9,6 +9,7 @@ bun.lock
 # Local tooling / scratch — never push these
 .bughunt-baseline/
 .rulestest/
+.playwright-mcp/
 firestore-debug.log
 ui-debug.log
 firebase-debug.log
